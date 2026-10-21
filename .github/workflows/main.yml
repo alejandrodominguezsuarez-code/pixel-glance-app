@@ -53,8 +53,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 3
-                versionName = "1.2"
+                versionCode = 4
+                versionName = "1.3"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -73,7 +73,7 @@ jobs:
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.READ_CALENDAR" />
-            <application android:label="De Un Vistazo XL" android:theme="@android:style/Theme.DeviceDefault">
+            <application android:label="Próximos Eventos XL" android:theme="@android:style/Theme.DeviceDefault">
                 <receiver android:name=".GlanceWidgetProvider" android:exported="true">
                     <intent-filter>
                         <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -92,17 +92,17 @@ jobs:
         cat << 'EOF' > app/src/main/res/layout/widget_layout.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:id="@+id/widget_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@android:color/background_dark"
             android:padding="16dp"
-            android:orientation="vertical"
-            android:gravity="center_vertical">
+            android:orientation="vertical">
             <TextView
                 android:id="@+id/widget_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="De Un Vistazo XL"
+                android:text="Próximos Eventos:"
                 android:textColor="@android:color/white"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -110,10 +110,11 @@ jobs:
                 android:id="@+id/widget_event"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Sin eventos en las próximas 2 horas"
+                android:text="Cargando..."
                 android:textColor="@android:color/darker_gray"
                 android:textSize="16sp"
-                android:layout_marginTop="4dp" />
+                android:layout_marginTop="8dp"
+                android:lineSpacingExtra="4dp" />
         </LinearLayout>
         EOF
 
@@ -121,7 +122,7 @@ jobs:
         <?xml version="1.0" encoding="utf-8"?>
         <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
             android:minWidth="110dp"
-            android:minHeight="60dp"
+            android:minHeight="80dp"
             android:updatePeriodMillis="1800000"
             android:initialLayout="@layout/widget_layout"
             android:configure="com.alex.pixelglancewidget.WidgetConfigActivity"
@@ -139,31 +140,26 @@ jobs:
 
         class WidgetConfigActivity : Activity() {
             private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
-
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
                 widgetId = intent?.extras?.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID) ?: AppWidgetManager.INVALID_APPWIDGET_ID
                 if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
-
                 if (checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
                     requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR), 1)
                 } else {
                     completeConfig()
                 }
             }
-
             override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
                 completeConfig()
             }
-
             private fun completeConfig() {
-                val intent = Intent(this, GlanceWidgetProvider::class.java)
-                intent.action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(widgetId))
+                val intent = Intent(this, GlanceWidgetProvider::class.java).apply {
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(widgetId))
+                }
                 sendBroadcast(intent)
-
-                val resultValue = Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                setResult(RESULT_OK, resultValue)
+                setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
                 finish()
             }
         }
@@ -171,18 +167,30 @@ jobs:
 
         cat << 'EOF' > app/src/main/java/com/alex/pixelglancewidget/GlanceWidgetProvider.kt
         package com.alex.pixelglancewidget
+        import android.app.PendingIntent
         import android.appwidget.AppWidgetManager
         import android.appwidget.AppWidgetProvider
+        import android.content.ContentUris
         import android.content.Context
-        import android.widget.RemoteViews
-        import android.provider.CalendarContract
+        import android.content.Intent
         import android.content.pm.PackageManager
-        import android.graphics.Color
+        import android.net.Uri
+        import android.provider.CalendarContract
+        import android.text.Html
+        import android.widget.RemoteViews
 
         class GlanceWidgetProvider : AppWidgetProvider() {
             override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
                 for (appWidgetId in appWidgetIds) {
                     val views = RemoteViews(context.packageName, R.layout.widget_layout)
+
+                    // Lanzador hacia Google Calendar
+                    val calIntent = Intent(Intent.ACTION_VIEW).apply {
+                        data = Uri.parse("content://com.android.calendar/time/")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    val pendingIntent = PendingIntent.getActivity(context, 0, calIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+                    views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
 
                     if (context.checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
                         views.setTextViewText(R.id.widget_event, "Requiere permiso de calendario")
@@ -193,41 +201,50 @@ jobs:
                     val now = System.currentTimeMillis()
                     val twoHoursLater = now + (2 * 60 * 60 * 1000)
 
-                    val projection = arrayOf(CalendarContract.Events.TITLE, CalendarContract.Events.DTSTART)
-                    val selection = "${CalendarContract.Events.DTSTART} >= ? AND ${CalendarContract.Events.DTSTART} <= ?"
-                    val selectionArgs = arrayOf(now.toString(), twoHoursLater.toString())
+                    val builder = CalendarContract.Instances.CONTENT_URI.buildUpon()
+                    ContentUris.appendId(builder, now)
+                    ContentUris.appendId(builder, twoHoursLater)
 
-                    var eventText = "Sin eventos próximos"
-                    var color = Color.parseColor("#AAAAAA") // Gris por defecto
+                    val projection = arrayOf(CalendarContract.Instances.TITLE, CalendarContract.Instances.BEGIN)
+                    val sortOrder = "${CalendarContract.Instances.BEGIN} ASC"
+
+                    val htmlText = java.lang.StringBuilder()
 
                     context.contentResolver.query(
-                        CalendarContract.Events.CONTENT_URI,
-                        projection, selection, selectionArgs, "${CalendarContract.Events.DTSTART} ASC"
+                        builder.build(), projection, null, null, sortOrder
                     )?.use { cursor ->
-                        if (cursor.moveToFirst()) {
+                        var hasEvents = false
+                        while (cursor.moveToNext()) {
+                            hasEvents = true
                             val titleStr = cursor.getString(0) ?: "Evento"
-                            val dtstart = cursor.getLong(1)
-                            val minutesLeft = ((dtstart - now) / 60000).toInt()
-
-                            var flair = ""
+                            val begin = cursor.getLong(1)
+                            
+                            var minutesLeft = ((begin - now) / 60000).toInt()
+                            if (minutesLeft < 0) minutesLeft = 0
+                            
+                            var flair = "📅"
                             val lowerTitle = titleStr.lowercase()
-                            if (lowerTitle.contains("dentista")) flair = "🦷 "
-                            else if (lowerTitle.contains("médic") || lowerTitle.contains("medic")) flair = "⚕️ "
+                            if (lowerTitle.contains("dentista")) flair = "🦷"
+                            else if (lowerTitle.contains("médic") || lowerTitle.contains("medic")) flair = "⚕️"
 
-                            color = when {
-                                minutesLeft <= 15 -> Color.parseColor("#FF4C4C") // Rojo
-                                minutesLeft <= 60 -> Color.parseColor("#FFA500") // Naranja
-                                minutesLeft <= 120 -> Color.parseColor("#4CFF4C") // Verde
-                                else -> Color.WHITE
+                            val hexColor = when {
+                                minutesLeft <= 15 -> "#FF4C4C"
+                                minutesLeft <= 60 -> "#FFA500"
+                                else -> "#4CFF4C"
                             }
 
-                            eventText = "$flair$titleStr en $minutesLeft min"
+                            val timeText = if (minutesLeft == 0) "Ahora" else "en $minutesLeft min"
+                            htmlText.append("<font color='$hexColor'>$flair $titleStr ($timeText)</font><br>")
                         }
+                        
+                        if (!hasEvents) {
+                            htmlText.append("<font color='#AAAAAA'>Sin eventos cercanos</font>")
+                        }
+                    } ?: run {
+                        htmlText.append("<font color='#AAAAAA'>Error leyendo calendario</font>")
                     }
 
-                    views.setTextViewText(R.id.widget_event, eventText)
-                    views.setTextColor(R.id.widget_event, color)
-
+                    views.setTextViewText(R.id.widget_event, Html.fromHtml(htmlText.toString(), Html.FROM_HTML_MODE_COMPACT))
                     appWidgetManager.updateAppWidget(appWidgetId, views)
                 }
             }
