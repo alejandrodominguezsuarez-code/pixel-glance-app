@@ -56,8 +56,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 7
-                versionName = "2.2"
+                versionCode = 8
+                versionName = "2.3"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -89,6 +89,7 @@ jobs:
                 <activity android:name=".WidgetConfigActivity" android:exported="true" android:theme="@android:style/Theme.DeviceDefault.DayNight">
                     <intent-filter>
                         <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+                        <action android:name="com.alex.pixelglancewidget.EDIT_CONFIG" />
                     </intent-filter>
                 </activity>
             </application>
@@ -123,7 +124,7 @@ jobs:
                 <RadioButton android:id="@+id/rb_trans" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Totalmente Transparente"/>
                 <RadioButton android:id="@+id/rb_dyn" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dinámico (Material You)"/>
             </RadioGroup>
-            <Button android:id="@+id/btn_save" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Guardar y Añadir" android:layout_marginTop="24dp"/>
+            <Button android:id="@+id/btn_save" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Guardar Cambios" android:layout_marginTop="24dp"/>
         </LinearLayout>
         EOF
 
@@ -190,6 +191,7 @@ jobs:
         import android.content.pm.PackageManager
         import android.os.Bundle
         import android.widget.Button
+        import android.widget.RadioButton
         import android.widget.RadioGroup
 
         class WidgetConfigActivity : Activity() {
@@ -200,6 +202,13 @@ jobs:
                 
                 widgetId = intent?.extras?.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID) ?: AppWidgetManager.INVALID_APPWIDGET_ID
                 if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
+
+                // Cargar preferencia actual si ya existía
+                val prefs = getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
+                val currentBg = prefs.getInt("bg_choice_$widgetId", 0)
+                if (currentBg == 1) findViewById<android.widget.RadioButton>(R.id.rb_trans).isChecked = true
+                else if (currentBg == 2) findViewById<android.widget.RadioButton>(R.id.rb_dyn).isChecked = true
+                else findViewById<android.widget.RadioButton>(R.id.rb_dark).isChecked = true
                 
                 findViewById<Button>(R.id.btn_save).setOnClickListener {
                     if (checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
@@ -226,7 +235,9 @@ jobs:
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(widgetId))
                 }
                 sendBroadcast(intent)
-                setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
+                
+                val resultValue = Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                setResult(RESULT_OK, resultValue)
                 finish()
             }
         }
@@ -265,14 +276,14 @@ jobs:
                 for (appWidgetId in appWidgetIds) {
                     val views = RemoteViews(context.packageName, R.layout.widget_layout)
 
-                    // Aplicar el fondo guardado en la configuración
+                    // Aplicar el fondo guardado
                     when (prefs.getInt("bg_choice_$appWidgetId", 0)) {
                         0 -> views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dark_glass)
                         1 -> views.setInt(R.id.widget_container, "setBackgroundColor", android.graphics.Color.TRANSPARENT)
                         2 -> views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dynamic)
                     }
 
-                    // Botón Refresh manual
+                    // Botón Refresh manual (🔄)
                     val refreshIntent = Intent(context, GlanceWidgetProvider::class.java).apply {
                         action = "com.alex.pixelglancewidget.FORCE_REFRESH"
                         putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(appWidgetId))
@@ -280,13 +291,20 @@ jobs:
                     val pendingRefresh = PendingIntent.getBroadcast(context, appWidgetId + 1000, refreshIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                     views.setOnClickPendingIntent(R.id.btn_refresh, pendingRefresh)
 
-                    // Lanzador general a Calendar
+                    // Tocar el título "Próximos Eventos (2h):" abre la Configuración para cambiar el fondo en cualquier momento
+                    val configIntent = Intent(context, WidgetConfigActivity::class.java).apply {
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    }
+                    val pendingConfig = PendingIntent.getActivity(context, appWidgetId + 2000, configIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                    views.setOnClickPendingIntent(R.id.widget_title, pendingConfig)
+
+                    // Tocar el cuerpo de los eventos abre Google Calendar
                     val calIntent = Intent(Intent.ACTION_VIEW).apply {
                         data = Uri.parse("content://com.android.calendar/time/")
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     }
                     val pendingCal = PendingIntent.getActivity(context, appWidgetId, calIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-                    views.setOnClickPendingIntent(R.id.widget_title, pendingCal)
                     views.setOnClickPendingIntent(R.id.widget_event, pendingCal)
 
                     if (context.checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
