@@ -56,8 +56,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 8
-                versionName = "2.3"
+                versionCode = 9
+                versionName = "2.4"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -191,7 +191,6 @@ jobs:
         import android.content.pm.PackageManager
         import android.os.Bundle
         import android.widget.Button
-        import android.widget.RadioButton
         import android.widget.RadioGroup
 
         class WidgetConfigActivity : Activity() {
@@ -203,7 +202,6 @@ jobs:
                 widgetId = intent?.extras?.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID) ?: AppWidgetManager.INVALID_APPWIDGET_ID
                 if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
 
-                // Cargar preferencia actual si ya existía
                 val prefs = getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
                 val currentBg = prefs.getInt("bg_choice_$widgetId", 0)
                 if (currentBg == 1) findViewById<android.widget.RadioButton>(R.id.rb_trans).isChecked = true
@@ -276,14 +274,12 @@ jobs:
                 for (appWidgetId in appWidgetIds) {
                     val views = RemoteViews(context.packageName, R.layout.widget_layout)
 
-                    // Aplicar el fondo guardado
                     when (prefs.getInt("bg_choice_$appWidgetId", 0)) {
                         0 -> views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dark_glass)
                         1 -> views.setInt(R.id.widget_container, "setBackgroundColor", android.graphics.Color.TRANSPARENT)
                         2 -> views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dynamic)
                     }
 
-                    // Botón Refresh manual (🔄)
                     val refreshIntent = Intent(context, GlanceWidgetProvider::class.java).apply {
                         action = "com.alex.pixelglancewidget.FORCE_REFRESH"
                         putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(appWidgetId))
@@ -291,7 +287,6 @@ jobs:
                     val pendingRefresh = PendingIntent.getBroadcast(context, appWidgetId + 1000, refreshIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                     views.setOnClickPendingIntent(R.id.btn_refresh, pendingRefresh)
 
-                    // Tocar el título "Próximos Eventos (2h):" abre la Configuración para cambiar el fondo en cualquier momento
                     val configIntent = Intent(context, WidgetConfigActivity::class.java).apply {
                         putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -299,7 +294,6 @@ jobs:
                     val pendingConfig = PendingIntent.getActivity(context, appWidgetId + 2000, configIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                     views.setOnClickPendingIntent(R.id.widget_title, pendingConfig)
 
-                    // Tocar el cuerpo de los eventos abre Google Calendar
                     val calIntent = Intent(Intent.ACTION_VIEW).apply {
                         data = Uri.parse("content://com.android.calendar/time/")
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -336,10 +330,27 @@ jobs:
                             var minutesLeft = ((begin - now) / 60000).toInt()
                             if (minutesLeft < 0) minutesLeft = 0
                             
+                            // Detección extendida de Iconos / Flairs
                             var flair = "📅"
                             val lowerTitle = titleStr.lowercase()
-                            if (lowerTitle.contains("dentista")) flair = "🦷"
-                            else if (lowerTitle.contains("médic") || lowerTitle.contains("medic")) flair = "⚕️"
+                            when {
+                                lowerTitle.contains("dentist") -> flair = "🦷"
+                                lowerTitle.contains("médic") || lowerTitle.contains("medic") || lowerTitle.contains("hospital") || lowerTitle.contains("consulta") -> flair = "⚕️"
+                                lowerTitle.contains("partido") || lowerTitle.contains("obradoiro") || lowerTitle.contains("basket") || lowerTitle.contains("baloncesto") -> flair = "🏀"
+                                lowerTitle.contains("tenis") || lowerTitle.contains("pádel") || lowerTitle.contains("padel") -> flair = "🎾"
+                                lowerTitle.contains("vuel") || lowerTitle.contains("avión") || lowerTitle.contains("avion") || lowerTitle.contains("flight") -> flair = "✈️"
+                                lowerTitle.contains("tren") || lowerTitle.contains("renfe") || lowerTitle.contains("ave") -> flair = "🚆"
+                                lowerTitle.contains("hotel") || lowerTitle.contains("reserva") || lowerTitle.contains("b&b") -> flair = "🏨"
+                                lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
+                            }
+
+                            // Formato de tiempo adaptativo y amigable
+                            val timeText = when {
+                                minutesLeft <= 0 -> "Ahora"
+                                minutesLeft <= 60 -> "$minutesLeft min"
+                                minutesLeft <= 90 -> "Menos de 1h y media"
+                                else -> "Menos de 2 horas"
+                            }
 
                             val hexColor = when {
                                 minutesLeft <= 15 -> "#FF4C4C"
@@ -347,7 +358,6 @@ jobs:
                                 else -> "#4CFF4C"
                             }
 
-                            val timeText = if (minutesLeft == 0) "Ahora" else "$minutesLeft min"
                             htmlText.append("<font color='$hexColor'>$flair $titleStr &nbsp;•&nbsp; $timeText</font><br>")
                         }
                         
@@ -386,5 +396,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-APK
+        name: DeUnVistazoXL-v2.4-APK
         path: app/build/outputs/apk/debug/app-debug.apk
