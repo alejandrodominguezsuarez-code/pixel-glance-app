@@ -54,8 +54,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 6
-                versionName = "2.1"
+                versionCode = 5
+                versionName = "2.0"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -80,11 +80,10 @@ jobs:
                 <receiver android:name=".GlanceWidgetProvider" android:exported="true">
                     <intent-filter>
                         <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                        <action android:name="com.alex.pixelglancewidget.FORCE_REFRESH" />
                     </intent-filter>
                     <meta-data android:name="android.appwidget.provider" android:resource="@xml/glance_widget_info" />
                 </receiver>
-                <activity android:name=".WidgetConfigActivity" android:exported="true" android:theme="@android:style/Theme.DeviceDefault.DayNight">
+                <activity android:name=".WidgetConfigActivity" android:exported="true" android:theme="@android:style/Theme.Translucent.NoTitleBar">
                     <intent-filter>
                         <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
                     </intent-filter>
@@ -93,15 +92,7 @@ jobs:
         </manifest>
         EOF
 
-        cat << 'EOF' > app/src/main/res/drawable/bg_dark_glass.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <solid android:color="#B3000000" />
-            <corners android:radius="24dp" />
-        </shape>
-        EOF
-
-        cat << 'EOF' > app/src/main/res/drawable/bg_dynamic.xml
+        cat << 'EOF' > app/src/main/res/drawable/widget_bg.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
             <solid android:color="?android:attr/colorBackgroundFloating" />
@@ -109,62 +100,33 @@ jobs:
         </shape>
         EOF
 
-        cat << 'EOF' > app/src/main/res/layout/activity_config.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent" android:layout_height="match_parent"
-            android:orientation="vertical" android:padding="24dp" android:gravity="center">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Configuración del Widget" android:textSize="22sp" android:textStyle="bold" android:layout_marginBottom="16dp"/>
-            <RadioGroup android:id="@+id/rg_background" android:layout_width="match_parent" android:layout_height="wrap_content">
-                <RadioButton android:id="@+id/rb_dark" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cristal Oscuro (Recomendado)" android:checked="true"/>
-                <RadioButton android:id="@+id/rb_trans" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Totalmente Transparente"/>
-                <RadioButton android:id="@+id/rb_dyn" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dinámico (Material You)"/>
-            </RadioGroup>
-            <Button android:id="@+id/btn_save" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Guardar y Añadir" android:layout_marginTop="24dp"/>
-        </LinearLayout>
-        EOF
-
         cat << 'EOF' > app/src/main/res/layout/widget_layout.xml
         <?xml version="1.0" encoding="utf-8"?>
-        <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:id="@+id/widget_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="18dp">
-            
+            android:background="@drawable/widget_bg"
+            android:padding="18dp"
+            android:orientation="vertical">
             <TextView
                 android:id="@+id/widget_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentTop="true"
-                android:layout_alignParentLeft="true"
                 android:text="Próximos Eventos (2h):"
-                android:textColor="@android:color/white"
-                android:textSize="17sp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textSize="18sp"
                 android:textStyle="bold" />
-                
-            <TextView
-                android:id="@+id/btn_refresh"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentTop="true"
-                android:layout_alignParentRight="true"
-                android:text="🔄"
-                android:textSize="16sp"
-                android:background="?android:selectableItemBackground" />
-                
             <TextView
                 android:id="@+id/widget_event"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/widget_title"
                 android:text="Cargando..."
-                android:textColor="@android:color/white"
-                android:textSize="15sp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textSize="16sp"
                 android:layout_marginTop="8dp"
-                android:lineSpacingExtra="6dp" />
-        </RelativeLayout>
+                android:lineSpacingExtra="4dp" />
+        </LinearLayout>
         EOF
 
         cat << 'EOF' > app/src/main/res/xml/glance_widget_info.xml
@@ -183,42 +145,26 @@ jobs:
         package com.alex.pixelglancewidget
         import android.app.Activity
         import android.appwidget.AppWidgetManager
-        import android.content.Context
         import android.content.Intent
         import android.content.pm.PackageManager
         import android.os.Bundle
-        import android.widget.Button
-        import android.widget.RadioGroup
 
         class WidgetConfigActivity : Activity() {
             private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
-                setContentView(R.layout.activity_config)
-                
                 widgetId = intent?.extras?.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID) ?: AppWidgetManager.INVALID_APPWIDGET_ID
                 if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
-                
-                findViewById<Button>(R.id.btn_save).setOnClickListener {
-                    if (checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
-                        requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR), 1)
-                    } else {
-                        saveAndComplete()
-                    }
+                if (checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR), 1)
+                } else {
+                    completeConfig()
                 }
             }
             override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) saveAndComplete()
+                completeConfig()
             }
-            private fun saveAndComplete() {
-                val rg = findViewById<RadioGroup>(R.id.rg_background)
-                val bgChoice = when (rg.checkedRadioButtonId) {
-                    R.id.rb_trans -> 1
-                    R.id.rb_dyn -> 2
-                    else -> 0
-                }
-                getSharedPreferences("widget_prefs", Context.MODE_PRIVATE).edit().putInt("bg_choice_$widgetId", bgChoice).apply()
-                
+            private fun completeConfig() {
                 val intent = Intent(this, GlanceWidgetProvider::class.java).apply {
                     action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(widgetId))
@@ -248,45 +194,16 @@ jobs:
 
         class GlanceWidgetProvider : AppWidgetProvider() {
             
-            override fun onReceive(context: Context, intent: Intent) {
-                super.onReceive(context, intent)
-                if (intent.action == "com.alex.pixelglancewidget.FORCE_REFRESH") {
-                    val appWidgetManager = AppWidgetManager.getInstance(context)
-                    val ids = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)
-                    if (ids != null) onUpdate(context, appWidgetManager, ids)
-                }
-            }
-
             override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-                val prefs = context.getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
-
                 for (appWidgetId in appWidgetIds) {
                     val views = RemoteViews(context.packageName, R.layout.widget_layout)
 
-                    // Aplicar el fondo guardado en la configuración
-                    when (prefs.getInt("bg_choice_$appWidgetId", 0)) {
-                        0 -> views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dark_glass)
-                        1 -> views.setInt(R.id.widget_container, "setBackgroundColor", android.graphics.Color.TRANSPARENT)
-                        2 -> views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dynamic)
-                    }
-
-                    // Botón Refresh manual
-                    val refreshIntent = Intent(context, GlanceWidgetProvider::class.java).apply {
-                        action = "com.alex.pixelglancewidget.FORCE_REFRESH"
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(appWidgetId))
-                    }
-                    val pendingRefresh = PendingIntent.getBroadcast(context, appWidgetId + 1000, refreshIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-                    views.setOnClickPendingIntent(R.id.btn_refresh, pendingRefresh)
-
-                    // Lanzador general a Calendar
                     val calIntent = Intent(Intent.ACTION_VIEW).apply {
                         data = Uri.parse("content://com.android.calendar/time/")
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     }
-                    val pendingCal = PendingIntent.getActivity(context, appWidgetId, calIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-                    // Cuidado: Asignamos el pendingCal al título para que al tocar el texto abra el calendario y no pise el área entera.
-                    views.setOnClickPendingIntent(R.id.widget_title, pendingCal)
-                    views.setOnClickPendingIntent(R.id.widget_event, pendingCal)
+                    val pendingIntent = PendingIntent.getActivity(context, 0, calIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+                    views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
 
                     if (context.checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
                         views.setTextViewText(R.id.widget_event, "Requiere permiso de calendario")
@@ -303,6 +220,7 @@ jobs:
 
                     val projection = arrayOf(CalendarContract.Instances.TITLE, CalendarContract.Instances.BEGIN)
                     val sortOrder = "${CalendarContract.Instances.BEGIN} ASC"
+
                     val htmlText = java.lang.StringBuilder()
 
                     context.contentResolver.query(
@@ -323,4 +241,64 @@ jobs:
                             else if (lowerTitle.contains("médic") || lowerTitle.contains("medic")) flair = "⚕️"
 
                             val hexColor = when {
-                                minutesLeft <= 1
+                                minutesLeft <= 15 -> "#FF4C4C"
+                                minutesLeft <= 60 -> "#FFA500"
+                                else -> "#4CFF4C"
+                            }
+
+                            val timeText = if (minutesLeft == 0) "Ahora" else "en $minutesLeft min"
+                            htmlText.append("<font color='$hexColor'>$flair $titleStr ($timeText)</font><br>")
+                        }
+                        
+                        if (!hasEvents) {
+                            htmlText.append("<font color='#888888'>Sin eventos cercanos</font>")
+                        }
+                    } ?: run {
+                        htmlText.append("<font color='#888888'>Error leyendo calendario</font>")
+                    }
+
+                    views.setTextViewText(R.id.widget_event, Html.fromHtml(htmlText.toString(), Html.FROM_HTML_MODE_COMPACT))
+                    appWidgetManager.updateAppWidget(appWidgetId, views)
+                }
+
+                // Programar el siguiente refresco para que los minutos bajen solos
+                scheduleNextUpdate(context, appWidgetIds)
+            }
+
+            private fun scheduleNextUpdate(context: Context, appWidgetIds: IntArray) {
+                val intent = Intent(context, GlanceWidgetProvider::class.java).apply {
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+                }
+                val pendingIntent = PendingIntent.getBroadcast(context, 123, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                
+                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                val calendar = Calendar.getInstance().apply {
+                    add(Calendar.MINUTE, 1)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                
+                alarmManager.setExact(AlarmManager.RTC, calendar.timeInMillis, pendingIntent)
+            }
+
+            override fun onDisabled(context: Context) {
+                super.onDisabled(context)
+                val intent = Intent(context, GlanceWidgetProvider::class.java).apply {
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                }
+                val pendingIntent = PendingIntent.getBroadcast(context, 123, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                alarmManager.cancel(pendingIntent)
+            }
+        }
+        EOF
+
+    - name: Compilar APK
+      run: gradle :app:assembleDebug --no-daemon
+
+    - name: Subir APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: DeUnVistazoXL-APK
+        path: app/build/outputs/apk/debug/app-debug.apk
