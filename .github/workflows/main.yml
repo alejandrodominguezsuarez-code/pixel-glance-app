@@ -19,10 +19,11 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa
+    - name: Generar Estructura Nativa con Interfaz Visual
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
+        mkdir -p app/src/main/res/layout
         
         echo "android.useAndroidX=true" > gradle.properties
         
@@ -52,8 +53,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 1
-                versionName = "1.0"
+                versionCode = 2
+                versionName = "1.1"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -83,21 +84,58 @@ jobs:
         </manifest>
         EOF
 
-        cat << 'EOF' > app/src/main/java/com/alex/pixelglancewidget/GlanceWidgetProvider.kt
-        package com.alex.pixelglancewidget
-        import android.appwidget.AppWidgetManager
-        import android.appwidget.AppWidgetProvider
-        import android.content.Context
-        class GlanceWidgetProvider : AppWidgetProvider() {}
+        cat << 'EOF' > app/src/main/res/layout/widget_layout.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/background_dark"
+            android:padding="16dp"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/widget_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Próximos Eventos"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/widget_event"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cargando calendario..."
+                android:textColor="@android:color/darker_gray"
+                android:textSize="14sp"
+                android:layout_marginTop="4dp" />
+        </LinearLayout>
         EOF
 
         cat << 'EOF' > app/src/main/res/xml/glance_widget_info.xml
         <?xml version="1.0" encoding="utf-8"?>
         <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
             android:minWidth="100dp"
-            android:minHeight="40dp"
+            android:minHeight="60dp"
             android:updatePeriodMillis="1800000"
+            android:initialLayout="@layout/widget_layout"
             android:widgetCategory="home_screen" />
+        EOF
+
+        cat << 'EOF' > app/src/main/java/com/alex/pixelglancewidget/GlanceWidgetProvider.kt
+        package com.alex.pixelglancewidget
+        import android.appwidget.AppWidgetManager
+        import android.appwidget.AppWidgetProvider
+        import android.content.Context
+        import android.widget.RemoteViews
+
+        class GlanceWidgetProvider : AppWidgetProvider() {
+            override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+                for (appWidgetId in appWidgetIds) {
+                    val views = RemoteViews(context.packageName, R.layout.widget_layout)
+                    appWidgetManager.updateAppWidget(appWidgetId, views)
+                }
+            }
+        }
         EOF
 
     - name: Compilar APK
