@@ -56,8 +56,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 13
-                versionName = "2.8"
+                versionCode = 14
+                versionName = "2.9"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -164,7 +164,7 @@ jobs:
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/widget_title"
-                android:text="⛅ Cargando clima..."
+                android:text="⛅ Santiago: Cargando..."
                 android:textColor="#E0E0E0"
                 android:textSize="13sp"
                 android:layout_marginTop="4dp" />
@@ -326,7 +326,7 @@ jobs:
                     val pendingCal = PendingIntent.getActivity(context, appWidgetId, calIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                     views.setOnClickPendingIntent(R.id.widget_event, pendingCal)
 
-                    // Petición meteorológica en segundo plano
+                    // Petición meteorológica optimizada con nombre de localidad
                     Thread {
                         try {
                             var lat = 42.8782
@@ -352,18 +352,20 @@ jobs:
                             reader.close()
                             
                             val jsonStr = response.toString()
-                            val tempIndex = jsonStr.indexOf("temperature_2m\":")
+                            val key = "\"temperature_2m\":"
+                            val tempIndex = jsonStr.indexOf(key)
                             if (tempIndex != -1) {
-                                val subStart = tempIndex + 16
-                                val subEnd = jsonStr.indexOf(",", subStart)
-                                if (subEnd != -1) {
-                                    val tempVal = jsonStr.substring(subStart, subEnd).trim()
-                                    views.setTextViewText(R.id.widget_weather, "⛅ Clima: ${tempVal}°C")
-                                    appWidgetManager.updateAppWidget(appWidgetId, views)
+                                val start = tempIndex + key.length
+                                var end = start
+                                while (end < jsonStr.length && (jsonStr[end].isDigit() || jsonStr[end] == '.' || jsonStr[end] == '-')) {
+                                    end++
                                 }
+                                val tempVal = jsonStr.substring(start, end).trim()
+                                views.setTextViewText(R.id.widget_weather, "⛅ Santiago • ${tempVal}°C")
+                                appWidgetManager.updateAppWidget(appWidgetId, views)
                             }
                         } catch (e: Exception) {
-                            views.setTextViewText(R.id.widget_weather, "⛅ Clima no disponible")
+                            views.setTextViewText(R.id.widget_weather, "⛅ Santiago • Clima no disponible")
                         }
                     }.start()
 
@@ -480,5 +482,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v2.8-APK
+        name: DeUnVistazoXL-v2.9-APK
         path: app/build/outputs/apk/debug/app-debug.apk
