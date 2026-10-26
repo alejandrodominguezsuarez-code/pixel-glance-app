@@ -56,8 +56,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 11
-                versionName = "2.6"
+                versionCode = 12
+                versionName = "2.7"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -77,6 +77,8 @@ jobs:
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.READ_CALENDAR" />
             <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+            <uses-permission android:name="android.permission.INTERNET" />
             
             <application android:label="Eventos XL" android:theme="@android:style/Theme.DeviceDefault.DayNight">
                 <receiver android:name=".GlanceWidgetProvider" android:exported="true">
@@ -156,16 +158,26 @@ jobs:
                 android:text="🔄"
                 android:textSize="16sp"
                 android:background="?android:selectableItemBackground" />
+
+            <TextView
+                android:id="@+id/widget_weather"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/widget_title"
+                android:text="⛅ Cargando clima..."
+                android:textColor="#E0E0E0"
+                android:textSize="13sp"
+                android:layout_marginTop="4dp" />
                 
             <TextView
                 android:id="@+id/widget_event"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/widget_title"
+                android:layout_below="@id/widget_weather"
                 android:text="Cargando..."
                 android:textColor="@android:color/white"
                 android:textSize="15sp"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="6dp"
                 android:lineSpacingExtra="6dp" />
         </RelativeLayout>
         EOF
@@ -174,7 +186,7 @@ jobs:
         <?xml version="1.0" encoding="utf-8"?>
         <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
             android:minWidth="110dp"
-            android:minHeight="80dp"
+            android:minHeight="100dp"
             android:updatePeriodMillis="1800000"
             android:initialLayout="@layout/widget_layout"
             android:configure="com.alex.pixelglancewidget.WidgetConfigActivity"
@@ -209,15 +221,23 @@ jobs:
                 else findViewById<android.widget.RadioButton>(R.id.rb_dark).isChecked = true
                 
                 findViewById<Button>(R.id.btn_save).setOnClickListener {
+                    val permissionsNeeded = mutableListOf<String>()
                     if (checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
-                        requestPermissions(arrayOf(android.Manifest.permission.READ_CALENDAR), 1)
+                        permissionsNeeded.add(android.Manifest.permission.READ_CALENDAR)
+                    }
+                    if (checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        permissionsNeeded.add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                    }
+                    
+                    if (permissionsNeeded.isNotEmpty()) {
+                        requestPermissions(permissionsNeeded.toTypedArray(), 1)
                     } else {
                         saveAndComplete()
                     }
                 }
             }
             override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) saveAndComplete()
+                saveAndComplete()
             }
             private fun saveAndComplete() {
                 val rg = findViewById<RadioGroup>(R.id.rg_background)
@@ -251,11 +271,17 @@ jobs:
         import android.content.Context
         import android.content.Intent
         import android.content.pm.PackageManager
+        import android.location.LocationManager
         import android.net.Uri
         import android.provider.CalendarContract
         import android.text.Html
         import android.widget.RemoteViews
+        import java.io.BufferedReader
+        import java.io.InputStreamReader
+        import java.net.HttpURLConnection
+        import java.net.URL
         import java.util.Calendar
+        import kotlin.concurrent.Thread
 
         class GlanceWidgetProvider : AppWidgetProvider() {
             
@@ -300,6 +326,42 @@ jobs:
                     }
                     val pendingCal = PendingIntent.getActivity(context, appWidgetId, calIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                     views.setOnClickPendingIntent(R.id.widget_event, pendingCal)
+
+                    // Petición meteorológica en segundo plano
+                    Thread {
+                        try {
+                            var lat = 42.8782 // Por defecto Santiago de Compostela si falla
+                            var lon = -8.5448
+                            if (context.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                                val locManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                                val loc = locManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) 
+                                    ?: locManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                                if (loc != null) {
+                                    lat = loc.latitude
+                                    lon = loc.longitude
+                                }
+                            }
+                            val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code")
+                            val conn = url.openConnection() as HttpURLConnection
+                            val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                            val response = StringBuilder()
+                            var line: String?
+                            while (reader.readLine().also { line = reader.readLine() } != null) {
+                                response.append(line)
+                            }
+                            reader.close()
+                            
+                            // Extraer temperatura simple por cadenas para evitar librerías JSON pesadas
+                            val tempIndex = response.indexOf("temperature_2m\":")
+                            if (tempIndex != -1) {
+                                val sub = response.substring(tempIndex + 16, tempIndex + 22).replace(",", "").trim()
+                                views.setTextViewText(R.id.widget_weather, "⛅ Clima: ${sub}°C • Localización OK")
+                                appWidgetManager.updateAppWidget(appWidgetId, views)
+                            }
+                        } catch (e: Exception) {
+                            views.setTextViewText(R.id.widget_weather, "⛅ Clima no disponible")
+                        }
+                    }.start()
 
                     if (context.checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
                         views.setTextViewText(R.id.widget_event, "Requiere permiso de calendario")
@@ -414,5 +476,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v2.6-APK
+        name: DeUnVistazoXL-v2.7-APK
         path: app/build/outputs/apk/debug/app-debug.apk
