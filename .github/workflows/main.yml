@@ -56,8 +56,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 9
-                versionName = "2.4"
+                versionCode = 10
+                versionName = "2.5"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -314,23 +314,32 @@ jobs:
                     ContentUris.appendId(builder, now)
                     ContentUris.appendId(builder, twoHoursLater)
 
-                    val projection = arrayOf(CalendarContract.Instances.TITLE, CalendarContract.Instances.BEGIN)
+                    val projection = arrayOf(
+                        CalendarContract.Instances.TITLE, 
+                        CalendarContract.Instances.BEGIN,
+                        CalendarContract.Instances.ALL_DAY
+                    )
                     val sortOrder = "${CalendarContract.Instances.BEGIN} ASC"
                     val htmlText = java.lang.StringBuilder()
+                    val seenEvents = mutableSetOf<String>()
 
                     context.contentResolver.query(
                         builder.build(), projection, null, null, sortOrder
                     )?.use { cursor ->
                         var hasEvents = false
                         while (cursor.moveToNext()) {
-                            hasEvents = true
                             val titleStr = cursor.getString(0) ?: "Evento"
+                            
+                            if (seenEvents.contains(titleStr)) continue
+                            seenEvents.add(titleStr)
+                            
+                            hasEvents = true
                             val begin = cursor.getLong(1)
+                            val isAllDay = cursor.getInt(2) == 1
                             
                             var minutesLeft = ((begin - now) / 60000).toInt()
                             if (minutesLeft < 0) minutesLeft = 0
                             
-                            // Detección extendida de Iconos / Flairs
                             var flair = "📅"
                             val lowerTitle = titleStr.lowercase()
                             when {
@@ -344,18 +353,25 @@ jobs:
                                 lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
                             }
 
-                            // Formato de tiempo adaptativo y amigable
-                            val timeText = when {
-                                minutesLeft <= 0 -> "Ahora"
-                                minutesLeft <= 60 -> "$minutesLeft min"
-                                minutesLeft <= 90 -> "Menos de 1h y media"
-                                else -> "Menos de 2 horas"
+                            val timeText = if (isAllDay) {
+                                "Todo el día"
+                            } else {
+                                when {
+                                    minutesLeft <= 0 -> "Ahora"
+                                    minutesLeft <= 60 -> "$minutesLeft min"
+                                    minutesLeft <= 90 -> "Menos de 1h y media"
+                                    else -> "Menos de 2 horas"
+                                }
                             }
 
-                            val hexColor = when {
-                                minutesLeft <= 15 -> "#FF4C4C"
-                                minutesLeft <= 60 -> "#FFA500"
-                                else -> "#4CFF4C"
+                            val hexColor = if (isAllDay) {
+                                "#4CFF4C"
+                            } else {
+                                when {
+                                    minutesLeft <= 15 -> "#FF4C4C"
+                                    minutesLeft <= 60 -> "#FFA500"
+                                    else -> "#4CFF4C"
+                                }
                             }
 
                             htmlText.append("<font color='$hexColor'>$flair $titleStr &nbsp;•&nbsp; $timeText</font><br>")
@@ -396,5 +412,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v2.4-APK
+        name: DeUnVistazoXL-v2.5-APK
         path: app/build/outputs/apk/debug/app-debug.apk
