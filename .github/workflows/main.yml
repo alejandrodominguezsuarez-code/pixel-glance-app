@@ -56,8 +56,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 15
-                versionName = "3.0"
+                versionCode = 16
+                versionName = "3.1"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -351,14 +351,13 @@ jobs:
                                 if (!addresses.isNullOrEmpty()) {
                                     locality = addresses[0].locality ?: addresses[0].subAdminArea ?: "Ubicación"
                                 }
-                            } catch (e: Exception) {
-                                // Continuar con valor por defecto si Geocoder falla
-                            }
+                            } catch (e: Exception) {}
 
+                            // 1. Petición de Temperatura
                             val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m")
                             val conn = url.openConnection() as HttpURLConnection
                             val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                            val response = StringBuilder()
+                            val response = java.lang.StringBuilder()
                             var line: String? = reader.readLine()
                             while (line != null) {
                                 response.append(line)
@@ -367,10 +366,38 @@ jobs:
                             reader.close()
                             
                             val jsonObj = JSONObject(response.toString())
-                            val currentObj = jsonObj.getJSONObject("current")
-                            val tempVal = currentObj.getDouble("temperature_2m")
+                            val tempVal = jsonObj.getJSONObject("current").getDouble("temperature_2m")
                             
-                            views.setTextViewText(R.id.widget_weather, "⛅ $locality • ${tempVal}°C")
+                            // 2. Petición de Calidad del Aire (AQI Europeo)
+                            var aqiText = ""
+                            try {
+                                val aqiUrl = URL("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=$lat&longitude=$lon&current=european_aqi")
+                                val aqiConn = aqiUrl.openConnection() as HttpURLConnection
+                                val aqiReader = BufferedReader(InputStreamReader(aqiConn.inputStream))
+                                val aqiResp = java.lang.StringBuilder()
+                                var aqiLine: String? = aqiReader.readLine()
+                                while (aqiLine != null) {
+                                    aqiResp.append(aqiLine)
+                                    aqiLine = aqiReader.readLine()
+                                }
+                                aqiReader.close()
+
+                                val aqiJson = JSONObject(aqiResp.toString())
+                                val aqiVal = aqiJson.getJSONObject("current").getDouble("european_aqi").toInt()
+                                
+                                aqiText = when {
+                                    aqiVal <= 20 -> " • AQI: Bueno 🟢"
+                                    aqiVal <= 40 -> " • AQI: Aceptable 🟡"
+                                    aqiVal <= 60 -> " • AQI: Moderado 🟠"
+                                    aqiVal <= 80 -> " • AQI: Malo 🔴"
+                                    aqiVal <= 100 -> " • AQI: Muy malo 🟣"
+                                    else -> " • AQI: Peligroso 🟤"
+                                }
+                            } catch (e: Exception) {
+                                // Fallback silencioso si falla el AQI
+                            }
+
+                            views.setTextViewText(R.id.widget_weather, "⛅ $locality • ${tempVal}°C$aqiText")
                             appWidgetManager.updateAppWidget(appWidgetId, views)
                         } catch (e: Exception) {
                             views.setTextViewText(R.id.widget_weather, "⛅ Clima no disponible")
@@ -491,5 +518,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v3.0-APK
+        name: DeUnVistazoXL-v3.1-APK
         path: app/build/outputs/apk/debug/app-debug.apk
