@@ -56,8 +56,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 10
-                versionName = "2.5"
+                versionCode = 11
+                versionName = "2.6"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -344,11 +344,13 @@ jobs:
                             val lowerTitle = titleStr.lowercase()
                             when {
                                 lowerTitle.contains("dentist") -> flair = "🦷"
-                                lowerTitle.contains("médic") || lowerTitle.contains("medic") || lowerTitle.contains("hospital") || lowerTitle.contains("consulta") -> flair = "⚕️"
-                                lowerTitle.contains("partido") || lowerTitle.contains("obradoiro") || lowerTitle.contains("basket") || lowerTitle.contains("baloncesto") -> flair = "🏀"
+                                lowerTitle.contains("médic") || lowerTitle.contains("medic") || lowerTitle.contains("hospital") || lowerTitle.contains("consulta") || lowerTitle.contains("sergas") -> flair = "⚕️"
+                                lowerTitle.contains("baloncesto") || lowerTitle.contains("basket") || lowerTitle.contains("obradoiro") -> flair = "🏀"
                                 lowerTitle.contains("tenis") || lowerTitle.contains("pádel") || lowerTitle.contains("padel") -> flair = "🎾"
+                                lowerTitle.contains("fútbol") || lowerTitle.contains("futbol") || lowerTitle.contains("futsal") -> flair = "⚽"
+                                lowerTitle.contains("piscina") || lowerTitle.contains("natación") || lowerTitle.contains("natacion") || lowerTitle.contains("swolf") -> flair = "🏊"
                                 lowerTitle.contains("vuel") || lowerTitle.contains("avión") || lowerTitle.contains("avion") || lowerTitle.contains("flight") -> flair = "✈️"
-                                lowerTitle.contains("tren") || lowerTitle.contains("renfe") || lowerTitle.contains("ave") -> flair = "🚆"
+                                lowerTitle.contains("tren") || lowerTitle.contains("renfe") || lowerTitle.contains("ave") || lowerTitle.contains("alvia") -> flair = "🚆"
                                 lowerTitle.contains("hotel") || lowerTitle.contains("reserva") || lowerTitle.contains("b&b") -> flair = "🏨"
                                 lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
                             }
@@ -412,5 +414,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v2.5-APK
+        name: DeUnVistazoXL-v2.6-APK
         path: app/build/outputs/apk/debug/app-debug.apk
