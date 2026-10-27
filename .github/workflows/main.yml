@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro Firmado
+name: Compilar Widget Pixel 6 Pro
 
 on:
   workflow_dispatch:
@@ -21,14 +21,12 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura y Llave de Firma Automática
+    - name: Generar Estructura Nativa Final
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
         mkdir -p app/src/main/res/layout
         mkdir -p app/src/main/res/drawable
-        
-        keytool -genkey -v -keystore app/release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias widget-key -storepass android123 -keypass android123 -dname "CN=Alex, OU=Dev, O=PixelGlance, L=Santiago, C=ES"
         
         echo "android.useAndroidX=true" > gradle.properties
         
@@ -55,22 +53,12 @@ jobs:
             namespace = "com.alex.pixelglancewidget"
             compileSdk = 34
             
-            signingConfigs {
-                create("release") {
-                    storeFile = file("release-key.jks")
-                    storePassword = "android123"
-                    keyAlias = "widget-key"
-                    keyPassword = "android123"
-                }
-            }
-            
             defaultConfig {
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 17
-                versionName = "3.2"
-                signingConfig = signingConfigs.getByName("release")
+                versionCode = 18
+                versionName = "3.3"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -162,15 +150,30 @@ jobs:
                 android:textSize="17sp"
                 android:textStyle="bold" />
                 
-            <TextView
-                android:id="@+id/btn_refresh"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentTop="true"
                 android:layout_alignParentRight="true"
-                android:text="🔄"
-                android:textSize="16sp"
-                android:background="?android:selectableItemBackground" />
+                android:orientation="horizontal">
+                
+                <TextView
+                    android:id="@+id/btn_settings"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⚙️"
+                    android:textSize="16sp"
+                    android:paddingEnd="12dp"
+                    android:background="?android:selectableItemBackground" />
+                    
+                <TextView
+                    android:id="@+id/btn_refresh"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🔄"
+                    android:textSize="16sp"
+                    android:background="?android:selectableItemBackground" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/widget_weather"
@@ -180,7 +183,8 @@ jobs:
                 android:text="⛅ Cargando clima..."
                 android:textColor="#E0E0E0"
                 android:textSize="13sp"
-                android:layout_marginTop="4dp" />
+                android:layout_marginTop="4dp"
+                android:background="?android:selectableItemBackground" />
                 
             <TextView
                 android:id="@+id/widget_event"
@@ -321,6 +325,7 @@ jobs:
                         2 -> views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dynamic)
                     }
 
+                    // Botón Refresh
                     val refreshIntent = Intent(context, GlanceWidgetProvider::class.java).apply {
                         action = "com.alex.pixelglancewidget.FORCE_REFRESH"
                         putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(appWidgetId))
@@ -328,13 +333,23 @@ jobs:
                     val pendingRefresh = PendingIntent.getBroadcast(context, appWidgetId + 1000, refreshIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                     views.setOnClickPendingIntent(R.id.btn_refresh, pendingRefresh)
 
+                    // Botón Settings
                     val configIntent = Intent(context, WidgetConfigActivity::class.java).apply {
                         putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                     }
                     val pendingConfig = PendingIntent.getActivity(context, appWidgetId + 2000, configIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-                    views.setOnClickPendingIntent(R.id.widget_title, pendingConfig)
+                    views.setOnClickPendingIntent(R.id.btn_settings, pendingConfig)
+                    // (Ya no asociamos pendingConfig al widget_title)
 
+                    // Link a la app del Tiempo en el texto del Clima
+                    val weatherIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=el+tiempo")).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    val pendingWeather = PendingIntent.getActivity(context, appWidgetId + 3000, weatherIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+                    views.setOnClickPendingIntent(R.id.widget_weather, pendingWeather)
+
+                    // Link al Calendario
                     val calIntent = Intent(Intent.ACTION_VIEW).apply {
                         data = Uri.parse("content://com.android.calendar/time/")
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -366,8 +381,8 @@ jobs:
                                 }
                             } catch (e: Exception) {}
 
-                            // 1. Petición de Clima (Temperatura + Weather Code dinámico)
-                            val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code")
+                            // Petición de Clima (Temperatura + Weather Code + Dirección Viento)
+                            val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code,wind_direction_10m")
                             val conn = url.openConnection() as HttpURLConnection
                             val reader = BufferedReader(InputStreamReader(conn.inputStream))
                             val response = java.lang.StringBuilder()
@@ -382,22 +397,34 @@ jobs:
                             val currentObj = jsonObj.getJSONObject("current")
                             val tempVal = currentObj.getDouble("temperature_2m")
                             val weatherCode = currentObj.getInt("weather_code")
+                            val windDir = currentObj.getDouble("wind_direction_10m")
 
-                            // Mapeo preciso de iconos climáticos
                             val weatherIcon = when (weatherCode) {
                                 0 -> "☀️"
                                 1, 2 -> "🌤️"
                                 3 -> "☁️"
                                 45, 48 -> "🌫️"
-                                51, 53, 55, 56, 57 -> "🌧️"
-                                61, 63, 65, 66, 67 -> "🌧️"
+                                51, 53, 55, 56, 57, 61, 63, 65, 66, 67 -> "🌧️"
                                 71, 73, 75, 77 -> "❄️"
                                 80, 81, 82 -> "🌦️"
                                 95, 96, 99 -> "⛈️"
                                 else -> "⛅"
                             }
                             
-                            // 2. Petición de Calidad del Aire (AQI Europeo)
+                            // Flechas de dirección de viento (hacia dónde va)
+                            val windIcon = when (windDir) {
+                                in 337.5..360.0, in 0.0..22.5 -> "⬇️"
+                                in 22.5..67.5 -> "↙️"
+                                in 67.5..112.5 -> "⬅️"
+                                in 112.5..157.5 -> "↖️"
+                                in 157.5..202.5 -> "⬆️"
+                                in 202.5..247.5 -> "↗️"
+                                in 247.5..292.5 -> "➡️"
+                                in 292.5..337.5 -> "↘️"
+                                else -> ""
+                            }
+                            
+                            // Petición de Calidad del Aire (AQI Europeo)
                             var aqiText = ""
                             try {
                                 val aqiUrl = URL("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=$lat&longitude=$lon&current=european_aqi")
@@ -415,16 +442,17 @@ jobs:
                                 val aqiVal = aqiJson.getJSONObject("current").getDouble("european_aqi").toInt()
                                 
                                 aqiText = when {
-                                    aqiVal <= 20 -> " • AQI: Bueno 🟢"
-                                    aqiVal <= 40 -> " • AQI: Aceptable 🟡"
-                                    aqiVal <= 60 -> " • AQI: Moderado 🟠"
-                                    aqiVal <= 80 -> " • AQI: Malo 🔴"
-                                    aqiVal <= 100 -> " • AQI: Muy malo 🟣"
-                                    else -> " • AQI: Peligroso 🟤"
+                                    aqiVal <= 20 -> " • AQI: 🟢"
+                                    aqiVal <= 40 -> " • AQI: 🟡"
+                                    aqiVal <= 60 -> " • AQI: 🟠"
+                                    aqiVal <= 80 -> " • AQI: 🔴"
+                                    aqiVal <= 100 -> " • AQI: 🟣"
+                                    else -> " • AQI: 🟤"
                                 }
                             } catch (e: Exception) {}
 
-                            views.setTextViewText(R.id.widget_weather, "$weatherIcon $locality • ${tempVal}°C$aqiText")
+                            // Render text
+                            views.setTextViewText(R.id.widget_weather, "$weatherIcon $locality • ${tempVal}°C $windIcon $aqiText")
                             appWidgetManager.updateAppWidget(appWidgetId, views)
                         } catch (e: Exception) {
                             views.setTextViewText(R.id.widget_weather, "⛅ Clima no disponible")
@@ -545,5 +573,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v3.2-APK
+        name: DeUnVistazoXL-v3.3-APK
         path: app/build/outputs/apk/debug/app-debug.apk
