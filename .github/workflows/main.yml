@@ -21,16 +21,14 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Llave de Firma Automática
-      run: |
-        keytool -genkey -v -keystore app/release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias widget-key -storepass android123 -keypass android123 -dname "CN=Alex, OU=Dev, O=PixelGlance, L=Santiago, C=ES"
-
-    - name: Generar Estructura Nativa Final
+    - name: Generar Estructura y Llave de Firma Automática
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
         mkdir -p app/src/main/res/layout
         mkdir -p app/src/main/res/drawable
+        
+        keytool -genkey -v -keystore app/release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias widget-key -storepass android123 -keypass android123 -dname "CN=Alex, OU=Dev, O=PixelGlance, L=Santiago, C=ES"
         
         echo "android.useAndroidX=true" > gradle.properties
         
