@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro Final
+name: Compilar Widget Pixel 6 Pro Firmado
 
 on:
   workflow_dispatch:
@@ -20,6 +20,10 @@ jobs:
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.4'
+
+    - name: Generar Llave de Firma Automática
+      run: |
+        keytool -genkey -v -keystore app/release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias widget-key -storepass android123 -keypass android123 -dname "CN=Alex, OU=Dev, O=PixelGlance, L=Santiago, C=ES"
 
     - name: Generar Estructura Nativa Final
       run: |
@@ -52,12 +56,23 @@ jobs:
         android {
             namespace = "com.alex.pixelglancewidget"
             compileSdk = 34
+            
+            signingConfigs {
+                create("release") {
+                    storeFile = file("release-key.jks")
+                    storePassword = "android123"
+                    keyAlias = "widget-key"
+                    keyPassword = "android123"
+                }
+            }
+            
             defaultConfig {
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 16
-                versionName = "3.1"
+                versionCode = 17
+                versionName = "3.2"
+                signingConfig = signingConfigs.getByName("release")
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -353,8 +368,8 @@ jobs:
                                 }
                             } catch (e: Exception) {}
 
-                            // 1. Petición de Temperatura
-                            val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m")
+                            // 1. Petición de Clima (Temperatura + Weather Code dinámico)
+                            val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code")
                             val conn = url.openConnection() as HttpURLConnection
                             val reader = BufferedReader(InputStreamReader(conn.inputStream))
                             val response = java.lang.StringBuilder()
@@ -366,7 +381,23 @@ jobs:
                             reader.close()
                             
                             val jsonObj = JSONObject(response.toString())
-                            val tempVal = jsonObj.getJSONObject("current").getDouble("temperature_2m")
+                            val currentObj = jsonObj.getJSONObject("current")
+                            val tempVal = currentObj.getDouble("temperature_2m")
+                            val weatherCode = currentObj.getInt("weather_code")
+
+                            // Mapeo preciso de iconos climáticos
+                            val weatherIcon = when (weatherCode) {
+                                0 -> "☀️"
+                                1, 2 -> "🌤️"
+                                3 -> "☁️"
+                                45, 48 -> "🌫️"
+                                51, 53, 55, 56, 57 -> "🌧️"
+                                61, 63, 65, 66, 67 -> "🌧️"
+                                71, 73, 75, 77 -> "❄️"
+                                80, 81, 82 -> "🌦️"
+                                95, 96, 99 -> "⛈️"
+                                else -> "⛅"
+                            }
                             
                             // 2. Petición de Calidad del Aire (AQI Europeo)
                             var aqiText = ""
@@ -393,11 +424,9 @@ jobs:
                                     aqiVal <= 100 -> " • AQI: Muy malo 🟣"
                                     else -> " • AQI: Peligroso 🟤"
                                 }
-                            } catch (e: Exception) {
-                                // Fallback silencioso si falla el AQI
-                            }
+                            } catch (e: Exception) {}
 
-                            views.setTextViewText(R.id.widget_weather, "⛅ $locality • ${tempVal}°C$aqiText")
+                            views.setTextViewText(R.id.widget_weather, "$weatherIcon $locality • ${tempVal}°C$aqiText")
                             appWidgetManager.updateAppWidget(appWidgetId, views)
                         } catch (e: Exception) {
                             views.setTextViewText(R.id.widget_weather, "⛅ Clima no disponible")
@@ -518,5 +547,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v3.1-APK
+        name: DeUnVistazoXL-v3.2-APK
         path: app/build/outputs/apk/debug/app-debug.apk
