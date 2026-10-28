@@ -140,18 +140,8 @@ jobs:
             android:layout_height="match_parent"
             android:padding="18dp">
             
-            <TextView
-                android:id="@+id/widget_title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentTop="true"
-                android:layout_alignParentLeft="true"
-                android:text="Próximos Eventos (2h):"
-                android:textColor="@android:color/white"
-                android:textSize="17sp"
-                android:textStyle="bold" />
-                
             <LinearLayout
+                android:id="@+id/action_buttons"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentTop="true"
@@ -163,8 +153,8 @@ jobs:
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="➡️"
-                    android:textSize="16sp"
-                    android:paddingEnd="8dp"
+                    android:textSize="18sp"
+                    android:paddingEnd="14dp"
                     android:background="?android:selectableItemBackground" />
 
                 <TextView
@@ -172,8 +162,8 @@ jobs:
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="⚙️"
-                    android:textSize="16sp"
-                    android:paddingEnd="8dp"
+                    android:textSize="18sp"
+                    android:paddingEnd="14dp"
                     android:background="?android:selectableItemBackground" />
                     
                 <TextView
@@ -181,15 +171,29 @@ jobs:
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🔄"
-                    android:textSize="16sp"
+                    android:textSize="18sp"
                     android:background="?android:selectableItemBackground" />
             </LinearLayout>
 
             <TextView
+                android:id="@+id/widget_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentLeft="true"
+                android:layout_toLeftOf="@id/action_buttons"
+                android:text="Próximos Eventos (2h):"
+                android:textColor="@android:color/white"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+                
+            <TextView
                 android:id="@+id/widget_weather"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/widget_title"
+                android:layout_below="@id/action_buttons"
                 android:text="⛅ Cargando clima..."
                 android:textColor="#E0E0E0"
                 android:textSize="13sp"
