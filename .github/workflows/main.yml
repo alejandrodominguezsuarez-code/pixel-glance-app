@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro
+name: Compilar Widget Pixel 6 Pro V3.4
 
 on:
   workflow_dispatch:
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 18
-                versionName = "3.3"
+                versionCode = 19
+                versionName = "3.4"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -325,7 +325,6 @@ jobs:
                         2 -> views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dynamic)
                     }
 
-                    // Botón Refresh
                     val refreshIntent = Intent(context, GlanceWidgetProvider::class.java).apply {
                         action = "com.alex.pixelglancewidget.FORCE_REFRESH"
                         putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(appWidgetId))
@@ -333,23 +332,19 @@ jobs:
                     val pendingRefresh = PendingIntent.getBroadcast(context, appWidgetId + 1000, refreshIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                     views.setOnClickPendingIntent(R.id.btn_refresh, pendingRefresh)
 
-                    // Botón Settings
                     val configIntent = Intent(context, WidgetConfigActivity::class.java).apply {
                         putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                     }
                     val pendingConfig = PendingIntent.getActivity(context, appWidgetId + 2000, configIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                     views.setOnClickPendingIntent(R.id.btn_settings, pendingConfig)
-                    // (Ya no asociamos pendingConfig al widget_title)
 
-                    // Link a la app del Tiempo en el texto del Clima
                     val weatherIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=el+tiempo")).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     }
                     val pendingWeather = PendingIntent.getActivity(context, appWidgetId + 3000, weatherIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                     views.setOnClickPendingIntent(R.id.widget_weather, pendingWeather)
 
-                    // Link al Calendario
                     val calIntent = Intent(Intent.ACTION_VIEW).apply {
                         data = Uri.parse("content://com.android.calendar/time/")
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -357,11 +352,12 @@ jobs:
                     val pendingCal = PendingIntent.getActivity(context, appWidgetId, calIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                     views.setOnClickPendingIntent(R.id.widget_event, pendingCal)
 
+                    // SISTEMA DE CACHÉ LOCAL Y BLINDAJE DE RED
                     Thread {
                         try {
                             var lat = 42.8782
                             var lon = -8.5448
-                            var locality = "Ubicación"
+                            var locality = prefs.getString("cached_locality", "Santiago") ?: "Santiago"
 
                             if (context.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                                 val locManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -370,20 +366,23 @@ jobs:
                                 if (loc != null) {
                                     lat = loc.latitude
                                     lon = loc.longitude
+                                    try {
+                                        val geocoder = Geocoder(context, Locale.getDefault())
+                                        val addresses = geocoder.getFromLocation(lat, lon, 1)
+                                        if (!addresses.isNullOrEmpty()) {
+                                            locality = addresses[0].locality ?: addresses[0].subAdminArea ?: locality
+                                            prefs.edit().putString("cached_locality", locality).apply()
+                                        }
+                                    } catch (e: Exception) {}
                                 }
                             }
-                            
-                            try {
-                                val geocoder = Geocoder(context, Locale.getDefault())
-                                val addresses = geocoder.getFromLocation(lat, lon, 1)
-                                if (!addresses.isNullOrEmpty()) {
-                                    locality = addresses[0].locality ?: addresses[0].subAdminArea ?: "Ubicación"
-                                }
-                            } catch (e: Exception) {}
 
-                            // Petición de Clima (Temperatura + Weather Code + Dirección Viento)
+                            // Petición HTTP protegida con timeout corto
                             val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code,wind_direction_10m")
                             val conn = url.openConnection() as HttpURLConnection
+                            conn.connectTimeout = 4000
+                            conn.readTimeout = 4000
+                            
                             val reader = BufferedReader(InputStreamReader(conn.inputStream))
                             val response = java.lang.StringBuilder()
                             var line: String? = reader.readLine()
@@ -411,7 +410,6 @@ jobs:
                                 else -> "⛅"
                             }
                             
-                            // Flechas de dirección de viento (hacia dónde va)
                             val windIcon = when (windDir) {
                                 in 337.5..360.0, in 0.0..22.5 -> "⬇️"
                                 in 22.5..67.5 -> "↙️"
@@ -424,11 +422,11 @@ jobs:
                                 else -> ""
                             }
                             
-                            // Petición de Calidad del Aire (AQI Europeo)
                             var aqiText = ""
                             try {
                                 val aqiUrl = URL("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=$lat&longitude=$lon&current=european_aqi")
                                 val aqiConn = aqiUrl.openConnection() as HttpURLConnection
+                                aqiConn.connectTimeout = 3000
                                 val aqiReader = BufferedReader(InputStreamReader(aqiConn.inputStream))
                                 val aqiResp = java.lang.StringBuilder()
                                 var aqiLine: String? = aqiReader.readLine()
@@ -451,11 +449,17 @@ jobs:
                                 }
                             } catch (e: Exception) {}
 
-                            // Render text
-                            views.setTextViewText(R.id.widget_weather, "$weatherIcon $locality • ${tempVal}°C $windIcon $aqiText")
+                            val finalWeatherStr = "$weatherIcon $locality • ${tempVal}°C $windIcon $aqiText"
+                            
+                            // Guardar en caché local para tolerancia a fallos
+                            prefs.edit().putString("cached_weather_$appWidgetId", finalWeatherStr).apply()
+
+                            views.setTextViewText(R.id.widget_weather, finalWeatherStr)
                             appWidgetManager.updateAppWidget(appWidgetId, views)
                         } catch (e: Exception) {
-                            views.setTextViewText(R.id.widget_weather, "⛅ Clima no disponible")
+                            // SI FALLA LA RED, RECUPERA LA CACHÉ EN VEZ DE MOSTRAR ERROR
+                            val cachedWeather = prefs.getString("cached_weather_$appWidgetId", "⛅ Santiago • Clima guardado")
+                            views.setTextViewText(R.id.widget_weather, cachedWeather ?: "⛅ Clima no disponible")
                             appWidgetManager.updateAppWidget(appWidgetId, views)
                         }
                     }.start()
@@ -573,5 +577,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v3.3-APK
+        name: DeUnVistazoXL-v3.4-APK
         path: app/build/outputs/apk/debug/app-debug.apk
