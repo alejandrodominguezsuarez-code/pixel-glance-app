@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V3.4
+name: Compilar Widget Pixel 6 Pro V2.0
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa Final
+    - name: Generar Estructura Nativa v2.0
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 19
-                versionName = "3.4"
+                versionCode = 20
+                versionName = "2.0"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -86,6 +86,7 @@ jobs:
                     <intent-filter>
                         <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                         <action android:name="com.alex.pixelglancewidget.FORCE_REFRESH" />
+                        <action android:name="com.alex.pixelglancewidget.TOGGLE_VIEW" />
                     </intent-filter>
                     <meta-data android:name="android.appwidget.provider" android:resource="@xml/glance_widget_info" />
                 </receiver>
@@ -158,12 +159,21 @@ jobs:
                 android:orientation="horizontal">
                 
                 <TextView
+                    android:id="@+id/btn_toggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="➡️"
+                    android:textSize="16sp"
+                    android:paddingEnd="8dp"
+                    android:background="?android:selectableItemBackground" />
+
+                <TextView
                     android:id="@+id/btn_settings"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="⚙️"
                     android:textSize="16sp"
-                    android:paddingEnd="12dp"
+                    android:paddingEnd="8dp"
                     android:background="?android:selectableItemBackground" />
                     
                 <TextView
@@ -293,6 +303,7 @@ jobs:
         import android.net.Uri
         import android.provider.CalendarContract
         import android.text.Html
+        import android.view.View
         import android.widget.RemoteViews
         import org.json.JSONObject
         import java.io.BufferedReader
@@ -306,8 +317,16 @@ jobs:
             
             override fun onReceive(context: Context, intent: Intent) {
                 super.onReceive(context, intent)
-                if (intent.action == "com.alex.pixelglancewidget.FORCE_REFRESH") {
-                    val appWidgetManager = AppWidgetManager.getInstance(context)
+                val appWidgetManager = AppWidgetManager.getInstance(context)
+                val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+                
+                if (intent.action == "com.alex.pixelglancewidget.TOGGLE_VIEW" && widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                    val prefs = context.getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
+                    val currentMode = prefs.getInt("view_mode_$widgetId", 0)
+                    val newMode = if (currentMode == 0) 1 else 0
+                    prefs.edit().putInt("view_mode_$widgetId", newMode).apply()
+                    onUpdate(context, appWidgetManager, intArrayOf(widgetId))
+                } else if (intent.action == "com.alex.pixelglancewidget.FORCE_REFRESH") {
                     val ids = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)
                     if (ids != null) onUpdate(context, appWidgetManager, ids)
                 }
@@ -318,12 +337,21 @@ jobs:
 
                 for (appWidgetId in appWidgetIds) {
                     val views = RemoteViews(context.packageName, R.layout.widget_layout)
+                    val viewMode = prefs.getInt("view_mode_$appWidgetId", 0)
 
                     when (prefs.getInt("bg_choice_$appWidgetId", 0)) {
                         0 -> views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dark_glass)
                         1 -> views.setInt(R.id.widget_container, "setBackgroundColor", android.graphics.Color.TRANSPARENT)
                         2 -> views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dynamic)
                     }
+
+                    // Botón de alternar vista (Flecha)
+                    val toggleIntent = Intent(context, GlanceWidgetProvider::class.java).apply {
+                        action = "com.alex.pixelglancewidget.TOGGLE_VIEW"
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                    }
+                    val pendingToggle = PendingIntent.getBroadcast(context, appWidgetId + 4000, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                    views.setOnClickPendingIntent(R.id.btn_toggle, pendingToggle)
 
                     val refreshIntent = Intent(context, GlanceWidgetProvider::class.java).apply {
                         action = "com.alex.pixelglancewidget.FORCE_REFRESH"
@@ -339,12 +367,6 @@ jobs:
                     val pendingConfig = PendingIntent.getActivity(context, appWidgetId + 2000, configIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                     views.setOnClickPendingIntent(R.id.btn_settings, pendingConfig)
 
-                    val weatherIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=el+tiempo")).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-                    val pendingWeather = PendingIntent.getActivity(context, appWidgetId + 3000, weatherIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-                    views.setOnClickPendingIntent(R.id.widget_weather, pendingWeather)
-
                     val calIntent = Intent(Intent.ACTION_VIEW).apply {
                         data = Uri.parse("content://com.android.calendar/time/")
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -352,117 +374,131 @@ jobs:
                     val pendingCal = PendingIntent.getActivity(context, appWidgetId, calIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                     views.setOnClickPendingIntent(R.id.widget_event, pendingCal)
 
-                    // SISTEMA DE CACHÉ LOCAL Y BLINDAJE DE RED
-                    Thread {
-                        try {
-                            var lat = 42.8782
-                            var lon = -8.5448
-                            var locality = prefs.getString("cached_locality", "Santiago") ?: "Santiago"
+                    if (viewMode == 1) {
+                        // VISTA 2: AGENDA DEL DÍA (SIN CLIMA, TODO VERTICAL)
+                        views.setViewVisibility(R.id.widget_weather, View.GONE)
+                        views.setTextViewText(R.id.widget_title, "Agenda del Día:")
+                        views.setTextViewText(R.id.btn_toggle, "⬅️")
+                    } else {
+                        // VISTA 1: VISTAZO RÁPIDO (CON CLIMA)
+                        views.setViewVisibility(R.id.widget_weather, View.VISIBLE)
+                        views.setTextViewText(R.id.widget_title, "Próximos Eventos (2h):")
+                        views.setTextViewText(R.id.btn_toggle, "➡️")
 
-                            if (context.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                                val locManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                                val loc = locManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) 
-                                    ?: locManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                                if (loc != null) {
-                                    lat = loc.latitude
-                                    lon = loc.longitude
-                                    try {
-                                        val geocoder = Geocoder(context, Locale.getDefault())
-                                        val addresses = geocoder.getFromLocation(lat, lon, 1)
-                                        if (!addresses.isNullOrEmpty()) {
-                                            locality = addresses[0].locality ?: addresses[0].subAdminArea ?: locality
-                                            prefs.edit().putString("cached_locality", locality).apply()
-                                        }
-                                    } catch (e: Exception) {}
-                                }
-                            }
-
-                            // Petición HTTP protegida con timeout corto
-                            val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code,wind_direction_10m")
-                            val conn = url.openConnection() as HttpURLConnection
-                            conn.connectTimeout = 4000
-                            conn.readTimeout = 4000
-                            
-                            val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                            val response = java.lang.StringBuilder()
-                            var line: String? = reader.readLine()
-                            while (line != null) {
-                                response.append(line)
-                                line = reader.readLine()
-                            }
-                            reader.close()
-                            
-                            val jsonObj = JSONObject(response.toString())
-                            val currentObj = jsonObj.getJSONObject("current")
-                            val tempVal = currentObj.getDouble("temperature_2m")
-                            val weatherCode = currentObj.getInt("weather_code")
-                            val windDir = currentObj.getDouble("wind_direction_10m")
-
-                            val weatherIcon = when (weatherCode) {
-                                0 -> "☀️"
-                                1, 2 -> "🌤️"
-                                3 -> "☁️"
-                                45, 48 -> "🌫️"
-                                51, 53, 55, 56, 57, 61, 63, 65, 66, 67 -> "🌧️"
-                                71, 73, 75, 77 -> "❄️"
-                                80, 81, 82 -> "🌦️"
-                                95, 96, 99 -> "⛈️"
-                                else -> "⛅"
-                            }
-                            
-                            val windIcon = when (windDir) {
-                                in 337.5..360.0, in 0.0..22.5 -> "⬇️"
-                                in 22.5..67.5 -> "↙️"
-                                in 67.5..112.5 -> "⬅️"
-                                in 112.5..157.5 -> "↖️"
-                                in 157.5..202.5 -> "⬆️"
-                                in 202.5..247.5 -> "↗️"
-                                in 247.5..292.5 -> "➡️"
-                                in 292.5..337.5 -> "↘️"
-                                else -> ""
-                            }
-                            
-                            var aqiText = ""
-                            try {
-                                val aqiUrl = URL("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=$lat&longitude=$lon&current=european_aqi")
-                                val aqiConn = aqiUrl.openConnection() as HttpURLConnection
-                                aqiConn.connectTimeout = 3000
-                                val aqiReader = BufferedReader(InputStreamReader(aqiConn.inputStream))
-                                val aqiResp = java.lang.StringBuilder()
-                                var aqiLine: String? = aqiReader.readLine()
-                                while (aqiLine != null) {
-                                    aqiResp.append(aqiLine)
-                                    aqiLine = aqiReader.readLine()
-                                }
-                                aqiReader.close()
-
-                                val aqiJson = JSONObject(aqiResp.toString())
-                                val aqiVal = aqiJson.getJSONObject("current").getDouble("european_aqi").toInt()
-                                
-                                aqiText = when {
-                                    aqiVal <= 20 -> " • AQI: 🟢"
-                                    aqiVal <= 40 -> " • AQI: 🟡"
-                                    aqiVal <= 60 -> " • AQI: 🟠"
-                                    aqiVal <= 80 -> " • AQI: 🔴"
-                                    aqiVal <= 100 -> " • AQI: 🟣"
-                                    else -> " • AQI: 🟤"
-                                }
-                            } catch (e: Exception) {}
-
-                            val finalWeatherStr = "$weatherIcon $locality • ${tempVal}°C $windIcon $aqiText"
-                            
-                            // Guardar en caché local para tolerancia a fallos
-                            prefs.edit().putString("cached_weather_$appWidgetId", finalWeatherStr).apply()
-
-                            views.setTextViewText(R.id.widget_weather, finalWeatherStr)
-                            appWidgetManager.updateAppWidget(appWidgetId, views)
-                        } catch (e: Exception) {
-                            // SI FALLA LA RED, RECUPERA LA CACHÉ EN VEZ DE MOSTRAR ERROR
-                            val cachedWeather = prefs.getString("cached_weather_$appWidgetId", "⛅ Santiago • Clima guardado")
-                            views.setTextViewText(R.id.widget_weather, cachedWeather ?: "⛅ Clima no disponible")
-                            appWidgetManager.updateAppWidget(appWidgetId, views)
+                        val weatherIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=el+tiempo")).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         }
-                    }.start()
+                        val pendingWeather = PendingIntent.getActivity(context, appWidgetId + 3000, weatherIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+                        views.setOnClickPendingIntent(R.id.widget_weather, pendingWeather)
+
+                        // GESTIÓN DE CLIMA Y CACHÉ LOCAL
+                        Thread {
+                            try {
+                                var lat = 42.8782
+                                var lon = -8.5448
+                                var locality = prefs.getString("cached_locality", "Santiago") ?: "Santiago"
+
+                                if (context.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                                    val locManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                                    val loc = locManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) 
+                                        ?: locManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                                    if (loc != null) {
+                                        lat = loc.latitude
+                                        lon = loc.longitude
+                                        try {
+                                            val geocoder = Geocoder(context, Locale.getDefault())
+                                            val addresses = geocoder.getFromLocation(lat, lon, 1)
+                                            if (!addresses.isNullOrEmpty()) {
+                                                locality = addresses[0].locality ?: addresses[0].subAdminArea ?: locality
+                                                prefs.edit().putString("cached_locality", locality).apply()
+                                            }
+                                        } catch (e: Exception) {}
+                                    }
+                                }
+
+                                val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code,wind_direction_10m")
+                                val conn = url.openConnection() as HttpURLConnection
+                                conn.connectTimeout = 4000
+                                conn.readTimeout = 4000
+                                
+                                val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                                val response = java.lang.StringBuilder()
+                                var line: String? = reader.readLine()
+                                while (line != null) {
+                                    response.append(line)
+                                    line = reader.readLine()
+                                }
+                                reader.close()
+                                
+                                val jsonObj = JSONObject(response.toString())
+                                val currentObj = jsonObj.getJSONObject("current")
+                                val tempVal = currentObj.getDouble("temperature_2m")
+                                val weatherCode = currentObj.getInt("weather_code")
+                                val windDir = currentObj.getDouble("wind_direction_10m")
+
+                                val weatherIcon = when (weatherCode) {
+                                    0 -> "☀️"
+                                    1, 2 -> "🌤️"
+                                    3 -> "☁️"
+                                    45, 48 -> "🌫️"
+                                    51, 53, 55, 56, 57, 61, 63, 65, 66, 67 -> "🌧️"
+                                    71, 73, 75, 77 -> "❄️"
+                                    80, 81, 82 -> "🌦️"
+                                    95, 96, 99 -> "⛈️"
+                                    else -> "⛅"
+                                }
+                                
+                                val windIcon = when (windDir) {
+                                    in 337.5..360.0, in 0.0..22.5 -> "⬇️"
+                                    in 22.5..67.5 -> "↙️"
+                                    in 67.5..112.5 -> "⬅️"
+                                    in 112.5..157.5 -> "↖️"
+                                    in 157.5..202.5 -> "⬆️"
+                                    in 202.5..247.5 -> "↗️"
+                                    in 247.5..292.5 -> "➡️"
+                                    in 292.5..337.5 -> "↘️"
+                                    else -> ""
+                                }
+                                
+                                var aqiText = ""
+                                try {
+                                    val aqiUrl = URL("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=$lat&longitude=$lon&current=european_aqi")
+                                    val aqiConn = aqiUrl.openConnection() as HttpURLConnection
+                                    aqiConn.connectTimeout = 3000
+                                    val aqiReader = BufferedReader(InputStreamReader(aqiConn.inputStream))
+                                    val aqiResp = java.lang.StringBuilder()
+                                    var aqiLine: String? = aqiReader.readLine()
+                                    while (aqiLine != null) {
+                                        aqiResp.append(aqiLine)
+                                        aqiLine = aqiReader.readLine()
+                                    }
+                                    aqiReader.close()
+
+                                    val aqiJson = JSONObject(aqiResp.toString())
+                                    val aqiVal = aqiJson.getJSONObject("current").getDouble("european_aqi").toInt()
+                                    
+                                    aqiText = when {
+                                        aqiVal <= 20 -> " • AQI: 🟢"
+                                        aqiVal <= 40 -> " • AQI: 🟡"
+                                        aqiVal <= 60 -> " • AQI: 🟠"
+                                        aqiVal <= 80 -> " • AQI: 🔴"
+                                        aqiVal <= 100 -> " • AQI: 🟣"
+                                        else -> " • AQI: 🟤"
+                                    }
+                                } catch (e: Exception) {}
+
+                                val finalWeatherStr = "$weatherIcon $locality • ${tempVal}°C $windIcon$aqiText"
+                                prefs.edit().putString("cached_weather_$appWidgetId", finalWeatherStr).apply()
+
+                                views.setTextViewText(R.id.widget_weather, finalWeatherStr)
+                                appWidgetManager.updateAppWidget(appWidgetId, views)
+                            } catch (e: Exception) {
+                                val cachedWeather = prefs.getString("cached_weather_$appWidgetId", "⛅ Santiago • Clima guardado")
+                                views.setTextViewText(R.id.widget_weather, cachedWeather ?: "⛅ Clima no disponible")
+                                appWidgetManager.updateAppWidget(appWidgetId, views)
+                            }
+                        }.start()
+                    }
 
                     if (context.checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
                         views.setTextViewText(R.id.widget_event, "Requiere permiso de calendario")
@@ -471,11 +507,21 @@ jobs:
                     }
 
                     val now = System.currentTimeMillis()
-                    val twoHoursLater = now + (2 * 60 * 60 * 1000)
+                    val endTime = if (viewMode == 1) {
+                        // Fin del día actual (23:59:59)
+                        Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, 23)
+                            set(Calendar.MINUTE, 59)
+                            set(Calendar.SECOND, 59)
+                        }.timeInMillis
+                    } else {
+                        // Próximas 2 horas
+                        now + (2 * 60 * 60 * 1000)
+                    }
 
                     val builder = CalendarContract.Instances.CONTENT_URI.buildUpon()
                     ContentUris.appendId(builder, now)
-                    ContentUris.appendId(builder, twoHoursLater)
+                    ContentUris.appendId(builder, endTime)
 
                     val projection = arrayOf(
                         CalendarContract.Instances.TITLE, 
@@ -490,6 +536,7 @@ jobs:
                         builder.build(), projection, null, null, sortOrder
                     )?.use { cursor ->
                         var hasEvents = false
+                        var eventCount = 0
                         while (cursor.moveToNext()) {
                             val titleStr = cursor.getString(0) ?: "Evento"
                             
@@ -497,6 +544,14 @@ jobs:
                             seenEvents.add(titleStr)
                             
                             hasEvents = true
+                            eventCount++
+
+                            // Límite de seguridad en vista extendida para evitar desbordamiento vertical
+                            if (viewMode == 1 && eventCount > 5) {
+                                htmlText.append("<font color='#AAAAAA'>... y más eventos hoy</font><br>")
+                                break
+                            }
+
                             val begin = cursor.getLong(1)
                             val isAllDay = cursor.getInt(2) == 1
                             
@@ -507,75 +562,4 @@ jobs:
                             val lowerTitle = titleStr.lowercase()
                             when {
                                 lowerTitle.contains("dentist") -> flair = "🦷"
-                                lowerTitle.contains("médic") || lowerTitle.contains("medic") || lowerTitle.contains("hospital") || lowerTitle.contains("consulta") || lowerTitle.contains("sergas") -> flair = "⚕️"
-                                lowerTitle.contains("baloncesto") || lowerTitle.contains("basket") || lowerTitle.contains("obradoiro") -> flair = "🏀"
-                                lowerTitle.contains("tenis") || lowerTitle.contains("pádel") || lowerTitle.contains("padel") -> flair = "🎾"
-                                lowerTitle.contains("fútbol") || lowerTitle.contains("futbol") || lowerTitle.contains("futsal") -> flair = "⚽"
-                                lowerTitle.contains("piscina") || lowerTitle.contains("natación") || lowerTitle.contains("natacion") || lowerTitle.contains("swolf") -> flair = "🏊"
-                                lowerTitle.contains("vuel") || lowerTitle.contains("avión") || lowerTitle.contains("avion") || lowerTitle.contains("flight") -> flair = "✈️"
-                                lowerTitle.contains("tren") || lowerTitle.contains("renfe") || lowerTitle.contains("ave") || lowerTitle.contains("alvia") -> flair = "🚆"
-                                lowerTitle.contains("hotel") || lowerTitle.contains("reserva") || lowerTitle.contains("b&b") -> flair = "🏨"
-                                lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
-                            }
-
-                            val timeText = if (isAllDay) {
-                                "Todo el día"
-                            } else {
-                                when {
-                                    minutesLeft <= 0 -> "Ahora"
-                                    minutesLeft <= 60 -> "$minutesLeft min"
-                                    minutesLeft <= 90 -> "Menos de 1h y media"
-                                    else -> "Menos de 2 horas"
-                                }
-                            }
-
-                            val hexColor = if (isAllDay) {
-                                "#4CFF4C"
-                            } else {
-                                when {
-                                    minutesLeft <= 15 -> "#FF4C4C"
-                                    minutesLeft <= 60 -> "#FFA500"
-                                    else -> "#4CFF4C"
-                                }
-                            }
-
-                            htmlText.append("<font color='$hexColor'>$flair $titleStr &nbsp;•&nbsp; $timeText</font><br>")
-                        }
-                        
-                        if (!hasEvents) htmlText.append("<font color='#AAAAAA'>Sin eventos cercanos</font>")
-                    } ?: run {
-                        htmlText.append("<font color='#AAAAAA'>Error leyendo calendario</font>")
-                    }
-
-                    views.setTextViewText(R.id.widget_event, Html.fromHtml(htmlText.toString(), Html.FROM_HTML_MODE_COMPACT))
-                    appWidgetManager.updateAppWidget(appWidgetId, views)
-                }
-                scheduleNextUpdate(context, appWidgetIds)
-            }
-
-            private fun scheduleNextUpdate(context: Context, appWidgetIds: IntArray) {
-                val intent = Intent(context, GlanceWidgetProvider::class.java).apply {
-                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
-                }
-                val pendingIntent = PendingIntent.getBroadcast(context, 123, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-                
-                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-                val calendar = Calendar.getInstance().apply {
-                    add(Calendar.MINUTE, 1)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-                alarmManager.setExact(AlarmManager.RTC, calendar.timeInMillis, pendingIntent)
-            }
-        }
-        EOF
-
-    - name: Compilar APK
-      run: gradle :app:assembleDebug --no-daemon
-
-    - name: Subir APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: DeUnVistazoXL-v3.4-APK
-        path: app/build/outputs/apk/debug/app-debug.apk
+                                lowerTitle.contains("médic") || lowerTitle.contains("medic") || lowerTitle.contains("
