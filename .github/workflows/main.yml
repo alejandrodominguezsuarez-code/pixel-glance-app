@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V2.2
+name: Compilar Widget Pixel 6 Pro V2.3
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v2.2
+    - name: Generar Estructura Nativa v2.3
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 22
-                versionName = "2.2"
+                versionCode = 23
+                versionName = "2.3"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -175,31 +175,47 @@ jobs:
                     android:background="?android:selectableItemBackground" />
             </LinearLayout>
 
+            <!-- LÍNEA 1 DEL CLIMA (Principal: Icono, Localidad y Temperatura) -->
             <TextView
-                android:id="@+id/widget_weather"
+                android:id="@+id/widget_weather_main"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_alignParentTop="true"
                 android:layout_alignParentLeft="true"
                 android:layout_toLeftOf="@id/action_buttons"
-                android:text="⛅ Cargando clima..."
-                android:textColor="#E0E0E0"
+                android:text="🌙 Cargando clima..."
+                android:textColor="@android:color/white"
                 android:textSize="13sp"
                 android:maxLines="1"
                 android:ellipsize="end"
+                android:background="?android:selectableItemBackground" />
+
+            <!-- LÍNEA 2 DEL CLIMA (Secundaria: Viento y AQI) -->
+            <TextView
+                android:id="@+id/widget_weather_sub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/widget_weather_main"
+                android:layout_alignParentLeft="true"
+                android:text="⬇️ • AQI: ..."
+                android:textColor="#E0E0E0"
+                android:textSize="12sp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:layout_marginTop="2dp"
                 android:background="?android:selectableItemBackground" />
 
             <TextView
                 android:id="@+id/widget_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/widget_weather"
+                android:layout_below="@id/widget_weather_sub"
                 android:layout_alignParentLeft="true"
                 android:text="Próximos Eventos (2h):"
                 android:textColor="@android:color/white"
-                android:textSize="16sp"
+                android:textSize="15sp"
                 android:textStyle="bold"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="6dp"
                 android:maxLines="1"
                 android:ellipsize="end" />
                 
@@ -384,14 +400,17 @@ jobs:
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     }
                     val pendingWeather = PendingIntent.getActivity(context, appWidgetId + 3000, weatherIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-                    views.setOnClickPendingIntent(R.id.widget_weather, pendingWeather)
+                    views.setOnClickPendingIntent(R.id.widget_weather_main, pendingWeather)
+                    views.setOnClickPendingIntent(R.id.widget_weather_sub, pendingWeather)
 
                     if (viewMode == 1) {
-                        views.setViewVisibility(R.id.widget_weather, View.GONE)
+                        views.setViewVisibility(R.id.widget_weather_main, View.GONE)
+                        views.setViewVisibility(R.id.widget_weather_sub, View.GONE)
                         views.setTextViewText(R.id.widget_title, "Agenda del Día:")
                         views.setTextViewText(R.id.btn_toggle, "⬅️")
                     } else {
-                        views.setViewVisibility(R.id.widget_weather, View.VISIBLE)
+                        views.setViewVisibility(R.id.widget_weather_main, View.VISIBLE)
+                        views.setViewVisibility(R.id.widget_weather_sub, View.VISIBLE)
                         views.setTextViewText(R.id.widget_title, "Próximos Eventos (2h):")
                         views.setTextViewText(R.id.btn_toggle, "➡️")
 
@@ -439,7 +458,6 @@ jobs:
                                 val weatherCode = currentObj.getInt("weather_code")
                                 val windDir = currentObj.getDouble("wind_direction_10m")
 
-                                // Comprobación de noche (antes de las 7:00 o después de las 20:00)
                                 val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
                                 val isNight = currentHour < 7 || currentHour >= 20
 
@@ -492,17 +510,25 @@ jobs:
                                         aqiVal <= 100 -> "🟣"
                                         else -> "🟤"
                                     }
-                                    aqiText = " • AQI: $aqiEmoji ($aqiVal)"
+                                    aqiText = "AQI: $aqiEmoji ($aqiVal)"
                                 } catch (e: Exception) {}
 
-                                val finalWeatherStr = "$weatherIcon $locality • ${tempVal}°C $windIcon$aqiText"
-                                prefs.edit().putString("cached_weather_$appWidgetId", finalWeatherStr).apply()
+                                val mainWeatherStr = "$weatherIcon $locality • ${tempVal}°C"
+                                val subWeatherStr = "$windIcon  •  $aqiText"
 
-                                views.setTextViewText(R.id.widget_weather, finalWeatherStr)
+                                prefs.edit()
+                                    .putString("cached_weather_main_$appWidgetId", mainWeatherStr)
+                                    .putString("cached_weather_sub_$appWidgetId", subWeatherStr)
+                                    .apply()
+
+                                views.setTextViewText(R.id.widget_weather_main, mainWeatherStr)
+                                views.setTextViewText(R.id.widget_weather_sub, subWeatherStr)
                                 appWidgetManager.updateAppWidget(appWidgetId, views)
                             } catch (e: Exception) {
-                                val cachedWeather = prefs.getString("cached_weather_$appWidgetId", "⛅ Santiago • Clima guardado")
-                                views.setTextViewText(R.id.widget_weather, cachedWeather ?: "⛅ Clima no disponible")
+                                val cachedMain = prefs.getString("cached_weather_main_$appWidgetId", "🌙 Santiago • Clima guardado")
+                                val cachedSub = prefs.getString("cached_weather_sub_$appWidgetId", "⬇️ • AQI: N/D")
+                                views.setTextViewText(R.id.widget_weather_main, cachedMain ?: "🌙 Clima no disponible")
+                                views.setTextViewText(R.id.widget_weather_sub, cachedSub ?: "⬇️")
                                 appWidgetManager.updateAppWidget(appWidgetId, views)
                             }
                         }.start()
@@ -516,14 +542,12 @@ jobs:
 
                     val now = System.currentTimeMillis()
                     val endTime = if (viewMode == 1) {
-                        // Fin del día actual en hora local estricta (23:59:59)
                         Calendar.getInstance().apply {
                             set(Calendar.HOUR_OF_DAY, 23)
                             set(Calendar.MINUTE, 59)
                             set(Calendar.SECOND, 59)
                         }.timeInMillis
                     } else {
-                        // Próximas 2 horas exactas
                         now + (2 * 60 * 60 * 1000)
                     }
 
@@ -552,7 +576,6 @@ jobs:
                             val end = cursor.getLong(2)
                             val isAllDay = cursor.getInt(3) == 1
 
-                            // Filtro estricto local: si es un evento de todo el día pero ya pasó o no corresponde estrictamente al día en curso, se filtra
                             if (isAllDay) {
                                 val evCal = Calendar.getInstance().apply { timeInMillis = begin }
                                 val nowCal = Calendar.getInstance()
@@ -561,7 +584,6 @@ jobs:
                                 }
                             }
 
-                            // Si es una instancia pasada que ya debió terminar, la omitimos en el bloque de 2h
                             if (viewMode == 0 && end <= now) {
                                 continue
                             }
@@ -662,5 +684,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v2.2-APK
+        name: DeUnVistazoXL-v2.3-APK
         path: app/build/outputs/apk/debug/app-debug.apk
