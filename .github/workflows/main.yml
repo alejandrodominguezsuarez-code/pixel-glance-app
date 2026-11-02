@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V2.4
+name: Compilar Widget Pixel 6 Pro V2.5
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v2.4
+    - name: Generar Estructura Nativa v2.5
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 24
-                versionName = "2.4"
+                versionCode = 25
+                versionName = "2.5"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -594,8 +594,8 @@ jobs:
                             hasEvents = true
                             eventCount++
 
-                            // Límite unificado a 5 eventos en ambas vistas para evitar desbordamiento
-                            if (eventCount > 5) {
+                            // Límite seguro reducido a 4 eventos para que nunca toque el borde inferior en tamaño por defecto
+                            if (eventCount > 4) {
                                 val overflowMsg = if (viewMode == 1) "... y más eventos hoy" else "... y más eventos próximos"
                                 htmlText.append("<font color='#AAAAAA'>$overflowMsg</font>")
                                 break
@@ -686,5 +686,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v2.4-APK
+        name: DeUnVistazoXL-v2.5-APK
         path: app/build/outputs/apk/debug/app-debug.apk
