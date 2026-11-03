@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V2.6
+name: Compilar Widget Pixel 6 Pro V2.7
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v2.6
+    - name: Generar Estructura Nativa v2.7
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 26
-                versionName = "2.6"
+                versionCode = 27
+                versionName = "2.7"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -467,7 +467,7 @@ jobs:
                                 val weatherCode = currentObj.getInt("weather_code")
                                 val windDir = currentObj.getDouble("wind_direction_10m")
 
-                                // Cálculo dinámico de noche basado en los datos reales de sunrise/sunset de Open-Meteo
+                                // Cálculo dinámico de noche (para el estado del clima)
                                 var isNight = false
                                 try {
                                     val dailyObj = jsonObj.getJSONObject("daily")
@@ -485,22 +485,28 @@ jobs:
                                     isNight = currentHour < 7 || currentHour >= 20
                                 }
 
+                                // Cálculo de fase lunar matemático e independiente del clima
+                                val knownNewMoon = 1704974400000L // Referencia: 11 Enero 2024
+                                val msPerCycle = 2551442976L // 29.53 días en milisegundos
+                                val currentMs = System.currentTimeMillis()
+                                var phasePercent = ((currentMs - knownNewMoon) % msPerCycle) / msPerCycle.toDouble()
+                                if (phasePercent < 0) phasePercent += 1.0
+                                
+                                val phaseIndex = Math.round(phasePercent * 8).toInt() % 8
+                                val moonPhaseIcon = when (phaseIndex) {
+                                    0 -> "🌑" // Nueva
+                                    1 -> "🌒" // Creciente cóncava
+                                    2 -> "🌓" // Cuarto creciente
+                                    3 -> "🌔" // Creciente convexa
+                                    4 -> "🌕" // Llena
+                                    5 -> "🌖" // Menguante convexa
+                                    6 -> "🌗" // Cuarto menguante
+                                    7 -> "🌘" // Menguante cóncava
+                                    else -> "🌑"
+                                }
+
                                 val weatherIcon = when (weatherCode) {
-                                    0 -> if (isNight) {
-                                        // Icono de fase lunar dinámico según el día del mes lunar aproximado
-                                        val c = Calendar.getInstance()
-                                        val dayOfMonth = c.get(Calendar.DAY_OF_MONTH)
-                                        when (dayOfMonth % 8) {
-                                            0 -> "🌑"
-                                            1, 2 -> "🌒"
-                                            3 -> "🌓"
-                                            4 -> "🌔"
-                                            5 -> "🌕"
-                                            6 -> "🌖"
-                                            7 -> "🌗"
-                                            else -> "🌙"
-                                        }
-                                    } else "☀️"
+                                    0 -> if (isNight) "🌙" else "☀️"
                                     1, 2 -> if (isNight) "☁️" else "🌤️"
                                     3 -> "☁️"
                                     45, 48 -> "🌫️"
@@ -552,7 +558,7 @@ jobs:
                                 } catch (e: Exception) {}
 
                                 val mainWeatherStr = "$weatherIcon $locality • ${tempVal}°C"
-                                val subWeatherStr = "$windIcon  •  $aqiText"
+                                val subWeatherStr = "$moonPhaseIcon  •  $windIcon  •  $aqiText" // Fase lunar inyectada en L2 permanentemente
 
                                 prefs.edit()
                                     .putString("cached_weather_main_$appWidgetId", mainWeatherStr)
@@ -723,5 +729,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v2.6-APK
+        name: DeUnVistazoXL-v2.7-APK
         path: app/build/outputs/apk/debug/app-debug.apk
