@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V2.5
+name: Compilar Widget Pixel 6 Pro V2.6
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v2.5
+    - name: Generar Estructura Nativa v2.6
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 25
-                versionName = "2.5"
+                versionCode = 26
+                versionName = "2.6"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -79,6 +79,7 @@ jobs:
             <uses-permission android:name="android.permission.READ_CALENDAR" />
             <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
             <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
             <uses-permission android:name="android.permission.INTERNET" />
             
             <application android:label="Eventos XL" android:theme="@android:style/Theme.DeviceDefault.DayNight">
@@ -277,6 +278,7 @@ jobs:
                     }
                     if (checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                         permissionsNeeded.add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                        permissionsNeeded.add(android.Manifest.permission.ACCESS_FINE_LOCATION)
                     }
                     
                     if (permissionsNeeded.isNotEmpty()) {
@@ -333,7 +335,9 @@ jobs:
         import java.io.InputStreamReader
         import java.net.HttpURLConnection
         import java.net.URL
+        import java.text.SimpleDateFormat
         import java.util.Calendar
+        import java.util.Date
         import java.util.Locale
 
         class GlanceWidgetProvider : AppWidgetProvider() {
@@ -420,10 +424,15 @@ jobs:
                                 var lon = -8.5448
                                 var locality = prefs.getString("cached_locality", "Santiago") ?: "Santiago"
 
-                                if (context.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                                val hasCoarse = context.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                                val hasFine = context.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+                                if (hasCoarse || hasFine) {
                                     val locManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                                    val loc = locManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) 
-                                        ?: locManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                                    val loc = locManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                                        ?: locManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                                        ?: locManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+
                                     if (loc != null) {
                                         lat = loc.latitude
                                         lon = loc.longitude
@@ -438,7 +447,7 @@ jobs:
                                     }
                                 }
 
-                                val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code,wind_direction_10m")
+                                val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code,wind_direction_10m&daily=sunrise,sunset&timezone=auto")
                                 val conn = url.openConnection() as HttpURLConnection
                                 conn.connectTimeout = 4000
                                 conn.readTimeout = 4000
@@ -458,11 +467,40 @@ jobs:
                                 val weatherCode = currentObj.getInt("weather_code")
                                 val windDir = currentObj.getDouble("wind_direction_10m")
 
-                                val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-                                val isNight = currentHour < 7 || currentHour >= 20
+                                // Cálculo dinámico de noche basado en los datos reales de sunrise/sunset de Open-Meteo
+                                var isNight = false
+                                try {
+                                    val dailyObj = jsonObj.getJSONObject("daily")
+                                    val sunriseArr = dailyObj.getJSONArray("sunrise")
+                                    val sunsetArr = dailyObj.getJSONArray("sunset")
+                                    if (sunriseArr.length() > 0 && sunsetArr.length() > 0) {
+                                        val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US)
+                                        val sunriseTime = isoFormat.parse(sunriseArr.getString(0))?.time ?: 0L
+                                        val sunsetTime = isoFormat.parse(sunsetArr.getString(0))?.time ?: 0L
+                                        val currentTime = System.currentTimeMillis()
+                                        isNight = currentTime < sunriseTime || currentTime > sunsetTime
+                                    }
+                                } catch (e: Exception) {
+                                    val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+                                    isNight = currentHour < 7 || currentHour >= 20
+                                }
 
                                 val weatherIcon = when (weatherCode) {
-                                    0 -> if (isNight) "🌙" else "☀️"
+                                    0 -> if (isNight) {
+                                        // Icono de fase lunar dinámico según el día del mes lunar aproximado
+                                        val c = Calendar.getInstance()
+                                        val dayOfMonth = c.get(Calendar.DAY_OF_MONTH)
+                                        when (dayOfMonth % 8) {
+                                            0 -> "🌑"
+                                            1, 2 -> "🌒"
+                                            3 -> "🌓"
+                                            4 -> "🌔"
+                                            5 -> "🌕"
+                                            6 -> "🌖"
+                                            7 -> "🌗"
+                                            else -> "🌙"
+                                        }
+                                    } else "☀️"
                                     1, 2 -> if (isNight) "☁️" else "🌤️"
                                     3 -> "☁️"
                                     45, 48 -> "🌫️"
@@ -594,7 +632,6 @@ jobs:
                             hasEvents = true
                             eventCount++
 
-                            // Límite seguro reducido a 4 eventos para que nunca toque el borde inferior en tamaño por defecto
                             if (eventCount > 4) {
                                 val overflowMsg = if (viewMode == 1) "... y más eventos hoy" else "... y más eventos próximos"
                                 htmlText.append("<font color='#AAAAAA'>$overflowMsg</font>")
@@ -686,5 +723,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v2.5-APK
+        name: DeUnVistazoXL-v2.6-APK
         path: app/build/outputs/apk/debug/app-debug.apk
