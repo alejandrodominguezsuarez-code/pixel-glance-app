@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V3.1
+name: Compilar Widget Pixel 6 Pro V3.2
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v3.1
+    - name: Generar Estructura Nativa v3.2
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 31
-                versionName = "3.1"
+                versionCode = 32
+                versionName = "3.2"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -559,9 +559,10 @@ jobs:
                                 } catch (e: Exception) {}
 
                                 // ==========================================
-                                // MOTOR DE COLA DE PRIORIDADES v3.1
+                                // MOTOR DE COLA DE PRIORIDADES v3.2
                                 // ==========================================
                                 val displayQueue = mutableListOf<String>()
+                                var hasWindAlert = false
 
                                 // 1. Evaluación de Alertas (Prioridad Alta)
                                 if (weatherCode in listOf(95, 96, 99)) {
@@ -569,12 +570,14 @@ jobs:
                                 }
                                 if (windGusts > 70.0) {
                                     displayQueue.add("<font color='#FF4C4C'>💨 Rachas ${windGusts.toInt()}km/h</font>")
+                                    hasWindAlert = true
                                 } else if (windGusts > 45.0) {
                                     displayQueue.add("<font color='#FFA500'>💨 Rachas ${windGusts.toInt()}km/h</font>")
+                                    hasWindAlert = true
                                 }
                                 if (precipitation > 10.0) {
                                     displayQueue.add("<font color='#FF4C4C'>🌧️ $precipitation l/m²</font>")
-                                } else if (precipitation > 0.5) {
+                                } else if (precipitation > 0.1) { // Umbral ajustado a 0.1 l/m² para detectar lluvia sutil de inmediato
                                     displayQueue.add("<font color='#FFA500'>🌧️ $precipitation l/m²</font>")
                                 }
                                 if (weatherCode in listOf(71, 73, 75, 77)) {
@@ -582,8 +585,12 @@ jobs:
                                 }
 
                                 // 2. Relleno con elementos estándar (Prioridad Normal)
-                                val defaultWindStr = "$windIcon ${windSpeed.toInt()}km/h"
-                                displayQueue.add(defaultWindStr)
+                                // MEJORAS v3.2: Si ya hay una alerta de ráfagas/viento activa, NO metemos el viento estándar repetido
+                                if (!hasWindAlert) {
+                                    val defaultWindStr = "$windIcon ${windSpeed.toInt()}km/h"
+                                    displayQueue.add(defaultWindStr)
+                                }
+                                
                                 if (aqiText.isNotEmpty()) displayQueue.add(aqiText)
                                 displayQueue.add("Luna: $moonPhaseIcon")
 
@@ -762,5 +769,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v3.1-APK
-        path: app/build/outputs/apk/debug/app-debug.apk
+        name: DeUnVistazoXL-v3.2-APK
+        path: app/build/outputs/apk/debug/app-debug.apk   
