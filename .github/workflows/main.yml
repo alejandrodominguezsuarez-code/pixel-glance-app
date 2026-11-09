@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V3.9 (Fix Area Tactil Toggle Eventos)
+name: Compilar Widget Pixel 6 Pro V4.0-Alpha (Efecto Lluvia Dinámico)
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v3.9
+    - name: Generar Estructura Nativa v4.0-Alpha
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 39
-                versionName = "3.9"
+                versionCode = 40
+                versionName = "4.0-alpha"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -101,12 +101,61 @@ jobs:
         </manifest>
         EOF
 
+        # RECURSOS VECTORIALES Y CAPAS PARA LLUVIA V4.0
         cat << 'EOF' > app/src/main/res/drawable/bg_dark_glass.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
             <solid android:color="#B3000000" />
             <corners android:radius="24dp" />
         </shape>
+        EOF
+
+        cat << 'EOF' > app/src/main/res/drawable/ic_rain_drops_pattern.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <vector xmlns:android="http://schemas.android.com/apk/res/android"
+            android:width="200dp"
+            android:height="200dp"
+            android:viewportWidth="100"
+            android:viewportHeight="100">
+            <path
+                android:fillColor="#FFFFFF"
+                android:fillAlpha="0.35"
+                android:pathData="M15,20 C15,20 12,25 12,27 C12,28.6 13.3,30 15,30 C16.7,30 18,28.6 18,27 C18,25 15,20 15,20 Z" />
+            <path
+                android:fillColor="#FFFFFF"
+                android:fillAlpha="0.25"
+                android:pathData="M45,10 C45,10 43,14 43,15.5 C43,16.6 43.9,17.5 45,17.5 C46.1,17.5 47,16.6 47,15.5 C47,14 45,10 45,10 Z" />
+            <path
+                android:fillColor="#FFFFFF"
+                android:fillAlpha="0.30"
+                android:pathData="M80,35 C80,35 77,40 77,42 C77,43.6 78.3,45 80,45 C81.7,45 83,43.6 83,42 C83,40 80,35 80,35 Z" />
+            <path
+                android:fillColor="#FFFFFF"
+                android:fillAlpha="0.20"
+                android:pathData="M30,65 C30,65 28,69 28,70.5 C28,71.6 28.9,72.5 30,72.5 C31.1,72.5 32,71.6 32,70.5 C32,69 30,65 30,65 Z" />
+            <path
+                android:fillColor="#FFFFFF"
+                android:fillAlpha="0.30"
+                android:pathData="M65,75 C65,75 62,80 62,82 C62,83.6 63.3,85 65,85 C66.7,85 68,83.6 68,82 C68,80 65,75 65,75 Z" />
+        </vector>
+        EOF
+
+        cat << 'EOF' > app/src/main/res/drawable/bg_rain_glass.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+            <item>
+                <shape>
+                    <solid android:color="#B3000000" />
+                    <corners android:radius="24dp" />
+                </shape>
+            </item>
+            <item>
+                <bitmap
+                    android:src="@drawable/ic_rain_drops_pattern"
+                    android:tileMode="repeat"
+                    android:alpha="0.25" />
+            </item>
+        </layer-list>
         EOF
 
         cat << 'EOF' > app/src/main/res/drawable/bg_dynamic.xml
@@ -141,7 +190,6 @@ jobs:
             android:layout_height="match_parent"
             android:padding="14dp">
             
-            <!-- CONTENEDOR DE BOTONES 2x1 (Con prioridad Z táctil) -->
             <LinearLayout
                 android:id="@+id/action_buttons"
                 android:layout_width="wrap_content"
@@ -377,13 +425,9 @@ jobs:
                 for (appWidgetId in appWidgetIds) {
                     val views = RemoteViews(context.packageName, R.layout.widget_layout)
                     val viewMode = prefs.getInt("view_mode_$appWidgetId", 0)
+                    val bgChoice = prefs.getInt("bg_choice_$appWidgetId", 0)
 
-                    when (prefs.getInt("bg_choice_$appWidgetId", 0)) {
-                        0 -> views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dark_glass)
-                        1 -> views.setInt(R.id.widget_container, "setBackgroundColor", android.graphics.Color.TRANSPARENT)
-                        2 -> views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dynamic)
-                    }
-
+                    // CONFIGURACIÓN DE INTENTS INTERACTIVOS
                     val toggleIntent = Intent(context, GlanceWidgetProvider::class.java).apply {
                         action = "com.alex.pixelglancewidget.TOGGLE_VIEW"
                         putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
@@ -487,6 +531,19 @@ jobs:
                                 val windGusts = currentObj.optDouble("wind_gusts_10m", windSpeed)
                                 val precipitation = currentObj.optDouble("precipitation", 0.0)
 
+                                // GESTIÓN DINÁMICA DE FONDO POR LLUVIA V4.0
+                                if (bgChoice == 0) {
+                                    if (precipitation >= 0.1) {
+                                        views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_rain_glass)
+                                    } else {
+                                        views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dark_glass)
+                                    }
+                                } else if (bgChoice == 1) {
+                                    views.setInt(R.id.widget_container, "setBackgroundColor", android.graphics.Color.TRANSPARENT)
+                                } else {
+                                    views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dynamic)
+                                }
+
                                 var isNight = false
                                 try {
                                     val dailyObj = jsonObj.getJSONObject("daily")
@@ -576,18 +633,14 @@ jobs:
                                     aqiText = "AQI: $aqiEmoji ($rawAqiVal)"
                                 } catch (e: Exception) {}
 
-                                // ==========================================
-                                // MOTOR DE COLA DE PRIORIDADES v3.9
-                                // ==========================================
+                                // MOTOR DE COLA DE PRIORIDADES
                                 val displayQueue = mutableListOf<String>()
                                 var hasWindAlert = false
 
-                                // 1. Tormentas Eléctricas
                                 if (weatherCode in listOf(95, 96, 99)) {
                                     displayQueue.add("<font color='#FF4C4C'>⚡ Tormenta</font>")
                                 }
 
-                                // 2. Rachas de Viento (Meteogalicia: 70 / 90 / 130 km/h)
                                 if (windGusts >= 130.0) {
                                     displayQueue.add("<font color='#FF4C4C'>💨 Rachas ${windGusts.toInt()}km/h</font>")
                                     hasWindAlert = true
@@ -599,7 +652,6 @@ jobs:
                                     hasWindAlert = true
                                 }
 
-                                // 3. Precipitación Horaria
                                 if (precipitation >= 60.0) {
                                     displayQueue.add("<font color='#FF4C4C'>🌧️ $precipitation l/m²</font>")
                                 } else if (precipitation >= 30.0) {
@@ -610,12 +662,10 @@ jobs:
                                     displayQueue.add("🌧️ $precipitation l/m²")
                                 }
 
-                                // 4. Nieve
                                 if (weatherCode in listOf(71, 73, 75, 77)) {
                                     displayQueue.add("<font color='#FFD700'>❄️ Nieve</font>")
                                 }
 
-                                // 5. Elementos Estándar
                                 if (!hasWindAlert) {
                                     val defaultWindStr = "$windIcon ${windSpeed.toInt()}km/h"
                                     displayQueue.add(defaultWindStr)
@@ -624,7 +674,6 @@ jobs:
                                 if (aqiText.isNotEmpty()) displayQueue.add(aqiText)
                                 displayQueue.add("Luna $moonPhaseIcon")
 
-                                // SELECCIÓN ADAPTATIVA (4 BLOQUES MAX)
                                 val finalSubList = displayQueue.take(4)
                                 val formattedList = if (finalSubList.size >= 4) {
                                     finalSubList.map { item ->
@@ -808,5 +857,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v3.9-APK
+        name: DeUnVistazoXL-v4.0-alpha-APK
         path: app/build/outputs/apk/debug/app-debug.apk
