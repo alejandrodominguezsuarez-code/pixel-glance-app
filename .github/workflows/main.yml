@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V4.1-Alpha5 (Fix Kotlin Definitivo)
+name: Compilar Widget Pixel 6 Pro V4.1-Alpha6 (Fix Kotlin Blindado)
 
 on:
   workflow_dispatch:
@@ -20,9 +20,9 @@ jobs:
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.4'
-        cache-disabled: true # Desactivamos la caché para evitar los errores 503 de GitHub
+        cache-disabled: true
 
-    - name: Generar Estructura Nativa v4.1-Alpha5
+    - name: Generar Estructura Nativa v4.1-Alpha6
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -58,8 +58,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 51
-                versionName = "4.1-alpha5"
+                versionCode = 52
+                versionName = "4.1-alpha6"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -828,8 +828,8 @@ jobs:
                                     lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
                                 }
 
-                                // REESCRITURA KOTLIN TOTALMENTE PLANA A VARIABLES MUTABLES
-                                var timeText = "Menos de 2 horas"
+                                // REESCRITURA KOTLIN TOTALMENTE BLINDADA PARA EVITAR EL ERROR DE COMPILADOR
+                                val timeText: String
                                 if (isAllDay) {
                                     timeText = "Todo el día"
                                 } else if (viewMode == 1) {
@@ -841,15 +841,19 @@ jobs:
                                     timeText = "$minutesLeft min"
                                 } else if (minutesLeft <= 90) {
                                     timeText = "Menos de 1h y media"
+                                } else {
+                                    timeText = "Menos de 2 horas"
                                 }
 
-                                var hexColor = "#4CFF4C"
-                                if (!isAllDay) {
-                                    if (minutesLeft <= 15) {
-                                        hexColor = "#FF4C4C"
-                                    } else if (minutesLeft <= 60) {
-                                        hexColor = "#FFA500"
-                                    }
+                                val hexColor: String
+                                if (isAllDay) {
+                                    hexColor = "#4CFF4C"
+                                } else if (minutesLeft <= 15) {
+                                    hexColor = "#FF4C4C"
+                                } else if (minutesLeft <= 60) {
+                                    hexColor = "#FFA500"
+                                } else {
+                                    hexColor = "#4CFF4C"
                                 }
 
                                 htmlText.append("<font color='$hexColor'>$flair $titleStr &nbsp;•&nbsp; $timeText</font><br>")
@@ -900,5 +904,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v4.1-alpha5-APK
+        name: DeUnVistazoXL-v4.1-alpha6-APK
         path: app/build/outputs/apk/debug/app-debug.apk
