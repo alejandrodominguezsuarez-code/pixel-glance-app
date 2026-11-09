@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V4.1-Alpha8 (Fix Definitivo Expresión Kotlin)
+name: Compilar Widget Pixel 6 Pro V4.1-Alpha1 (Fix Overflow Eventos)
 
 on:
   workflow_dispatch:
@@ -20,9 +20,8 @@ jobs:
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.4'
-        cache-disabled: true
 
-    - name: Generar Estructura Nativa v4.1-Alpha8
+    - name: Generar Estructura Nativa v4.1-Alpha1
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -58,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 54
-                versionName = "4.1-alpha8"
+                versionCode = 47
+                versionName = "4.1-alpha1"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -102,6 +101,7 @@ jobs:
         </manifest>
         EOF
 
+        # DREWABLES DE FONDO MULTI-CLIMA
         cat << 'EOF' > app/src/main/res/drawable/bg_dark_glass.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
@@ -602,7 +602,7 @@ jobs:
                                 val msPerCycle = 2551442976L
                                 val currentMs = System.currentTimeMillis()
                                 var phasePercent = ((currentMs - knownNewMoon) % msPerCycle) / msPerCycle.toDouble()
-                                if (phasePercent < 0) { phasePercent += 1.0 }
+                                if (phasePercent < 0) phasePercent += 1.0
                                 
                                 val phaseIndex = Math.round(phasePercent * 8).toInt() % 8
                                 val moonPhaseIcon = when (phaseIndex) {
@@ -707,7 +707,7 @@ jobs:
                                     displayQueue.add(defaultWindStr)
                                 }
                                 
-                                if (aqiText.isNotEmpty()) { displayQueue.add(aqiText) }
+                                if (aqiText.isNotEmpty()) displayQueue.add(aqiText)
                                 displayQueue.add("Luna $moonPhaseIcon")
 
                                 val finalSubList = displayQueue.take(4)
@@ -750,6 +750,9 @@ jobs:
 
                     val now = System.currentTimeMillis()
                     
+                    // ========================================================
+                    // LÓGICA REVISADA: RANGO AMPLIO HASTA FINAL DEL DÍA
+                    // ========================================================
                     val endOfDay = Calendar.getInstance().apply {
                         set(Calendar.HOUR_OF_DAY, 23)
                         set(Calendar.MINUTE, 59)
@@ -793,25 +796,26 @@ jobs:
                                 }
                             }
 
-                            if (end <= now) { continue }
+                            if (end <= now) continue
                             
-                            val eventKey = "${titleStr}_${begin}"
-                            if (seenEvents.contains(eventKey)) { continue }
-                            seenEvents.add(eventKey)
+                            if (seenEvents.contains(titleStr)) continue
+                            seenEvents.add(titleStr)
                             
                             hasEvents = true
                             totalEventsToday++
 
+                            // Si estamos en modo de 2 horas y el evento es posterior a 2 horas, no lo dibujamos como fila principal
                             if (viewMode == 0 && begin > twoHoursFromNow) {
                                 continue
                             }
 
+                            // Máximo de eventos dibujables (2 en modo compacto, 4 en vista agenda)
                             val maxVisible = if (viewMode == 0) 2 else 4
 
                             if (displayedCount < maxVisible) {
                                 displayedCount++
                                 var minutesLeft = ((begin - now) / 60000).toInt()
-                                if (minutesLeft < 0) { minutesLeft = 0 }
+                                if (minutesLeft < 0) minutesLeft = 0
                                 
                                 var flair = "📅"
                                 val lowerTitle = titleStr.lowercase()
@@ -828,43 +832,29 @@ jobs:
                                     lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
                                 }
 
-                                // VARIABLES MUTABLES CON ASIGNACIÓN SECUENCIAL PURA (IMPOSIBLE QUE EL COMPILADOR SE QUEJE)
-                                var timeText: String = "Menos de 2 horas"
-                                if (isAllDay) {
-                                    timeText = "Todo el día"
+                                val timeText = if (isAllDay) {
+                                    "Todo el día"
                                 } else {
                                     if (viewMode == 1) {
                                         val evCal = Calendar.getInstance().apply { timeInMillis = begin }
-                                        timeText = String.format(Locale.getDefault(), "%02d:%02d", evCal.get(Calendar.HOUR_OF_DAY), evCal.get(Calendar.MINUTE))
+                                        String.format(Locale.getDefault(), "%02d:%02d", evCal.get(Calendar.HOUR_OF_DAY), evCal.get(Calendar.MINUTE))
                                     } else {
-                                        if (minutesLeft <= 0) {
-                                            timeText = "Ahora"
-                                        } else {
-                                            if (minutesLeft <= 60) {
-                                                timeText = "$minutesLeft min"
-                                            } else {
-                                                if (minutesLeft <= 90) {
-                                                    timeText = "Menos de 1h y media"
-                                                } else {
-                                                    timeText = "Menos de 2 horas"
-                                                }
-                                            }
+                                        when {
+                                            minutesLeft <= 0 -> "Ahora"
+                                            minutesLeft <= 60 -> "$minutesLeft min"
+                                            minutesLeft <= 90 -> "Menos de 1h y media"
+                                            else -> "Menos de 2 horas"
                                         }
                                     }
                                 }
 
-                                var hexColor: String = "#4CFF4C"
-                                if (isAllDay) {
-                                    hexColor = "#4CFF4C"
+                                val hexColor = if (isAllDay) {
+                                    "#4CFF4C"
                                 } else {
-                                    if (minutesLeft <= 15) {
-                                        hexColor = "#FF4C4C"
-                                    } else {
-                                        if (minutesLeft <= 60) {
-                                            hexColor = "#FFA500"
-                                        } else {
-                                            hexColor = "#4CFF4C"
-                                        }
+                                    when {
+                                        minutesLeft <= 15 -> "#FF4C4C"
+                                        minutesLeft <= 60 -> "#FFA500"
+                                        else -> "#4CFF4C"
                                     }
                                 }
 
@@ -872,6 +862,7 @@ jobs:
                             }
                         }
                         
+                        // Evaluar si hay más eventos pendientes más tarde
                         if (hasEvents) {
                             val remaining = totalEventsToday - displayedCount
                             if (remaining > 0) {
@@ -916,5 +907,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v4.1-alpha8-APK
+        name: DeUnVistazoXL-v4.1-alpha1-APK
         path: app/build/outputs/apk/debug/app-debug.apk
