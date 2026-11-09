@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V3.8 (Botonera 2x1 en Columna Corta)
+name: Compilar Widget Pixel 6 Pro V3.9 (Fix Area Tactil Toggle Eventos)
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v3.8
+    - name: Generar Estructura Nativa v3.9
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 38
-                versionName = "3.8"
+                versionCode = 39
+                versionName = "3.9"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -141,7 +141,7 @@ jobs:
             android:layout_height="match_parent"
             android:padding="14dp">
             
-            <!-- CONTENEDOR DE BOTONES 2x1 (2 arriba, 1 abajo) -->
+            <!-- CONTENEDOR DE BOTONES 2x1 (Con prioridad Z táctil) -->
             <LinearLayout
                 android:id="@+id/action_buttons"
                 android:layout_width="wrap_content"
@@ -151,7 +151,6 @@ jobs:
                 android:orientation="vertical"
                 android:gravity="end">
                 
-                <!-- Fila Superior: Ajustes y Refresco -->
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -175,14 +174,16 @@ jobs:
                         android:background="?android:selectableItemBackground" />
                 </LinearLayout>
 
-                <!-- Fila Inferior: Alternar Vista -->
                 <TextView
                     android:id="@+id/btn_toggle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="➡️"
                     android:textSize="17sp"
-                    android:layout_marginTop="2dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
                     android:background="?android:selectableItemBackground" />
             </LinearLayout>
 
@@ -221,6 +222,7 @@ jobs:
                 android:layout_height="wrap_content"
                 android:layout_below="@id/widget_weather_sub"
                 android:layout_alignParentLeft="true"
+                android:layout_toLeftOf="@id/action_buttons"
                 android:text="Próximos Eventos (2h):"
                 android:textColor="@android:color/white"
                 android:textSize="15sp"
@@ -234,6 +236,7 @@ jobs:
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/widget_title"
+                android:layout_toLeftOf="@id/action_buttons"
                 android:text="Cargando..."
                 android:textColor="@android:color/white"
                 android:textSize="14sp"
@@ -574,7 +577,7 @@ jobs:
                                 } catch (e: Exception) {}
 
                                 // ==========================================
-                                // MOTOR DE COLA DE PRIORIDADES v3.8
+                                // MOTOR DE COLA DE PRIORIDADES v3.9
                                 // ==========================================
                                 val displayQueue = mutableListOf<String>()
                                 var hasWindAlert = false
@@ -805,5 +808,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v3.8-APK
+        name: DeUnVistazoXL-v3.9-APK
         path: app/build/outputs/apk/debug/app-debug.apk
