@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V4.0-RELEASE (Fix AAPT Snow Vector)
+name: Compilar Widget Pixel 6 Pro V4.1-Alpha2 (Fix Eventos Repetidos)
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v4.0 (Fix Vector Nieve)
+    - name: Generar Estructura Nativa v4.1-Alpha2
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 46
-                versionName = "4.0"
+                versionCode = 48
+                versionName = "4.1-alpha2"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -101,7 +101,7 @@ jobs:
         </manifest>
         EOF
 
-        # 1. CRISTAL OSCURO ESTÁNDAR
+        # DRAWABLES MULTI-CLIMA
         cat << 'EOF' > app/src/main/res/drawable/bg_dark_glass.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
@@ -110,7 +110,6 @@ jobs:
         </shape>
         EOF
 
-        # 2. CAPA DE LLUVIA
         cat << 'EOF' > app/src/main/res/drawable/ic_rain_drops_pattern.xml
         <?xml version="1.0" encoding="utf-8"?>
         <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -137,7 +136,6 @@ jobs:
         </layer-list>
         EOF
 
-        # 3. CAPA DE NIEVE (CORREGIDA SINTAXIS PATH)
         cat << 'EOF' > app/src/main/res/drawable/ic_snow_flakes_pattern.xml
         <?xml version="1.0" encoding="utf-8"?>
         <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -164,7 +162,6 @@ jobs:
         </layer-list>
         EOF
 
-        # 4. CAPA DE NIEGLA
         cat << 'EOF' > app/src/main/res/drawable/bg_fog_glass.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
@@ -176,7 +173,6 @@ jobs:
         </shape>
         EOF
 
-        # 5. CAPA DE TORMENTA
         cat << 'EOF' > app/src/main/res/drawable/bg_storm_glass.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
@@ -753,19 +749,16 @@ jobs:
                     }
 
                     val now = System.currentTimeMillis()
-                    val endTime = if (viewMode == 1) {
-                        Calendar.getInstance().apply {
-                            set(Calendar.HOUR_OF_DAY, 23)
-                            set(Calendar.MINUTE, 59)
-                            set(Calendar.SECOND, 59)
-                        }.timeInMillis
-                    } else {
-                        now + (2 * 60 * 60 * 1000)
-                    }
+                    
+                    val endOfDay = Calendar.getInstance().apply {
+                        set(Calendar.HOUR_OF_DAY, 23)
+                        set(Calendar.MINUTE, 59)
+                        set(Calendar.SECOND, 59)
+                    }.timeInMillis
 
                     val builder = CalendarContract.Instances.CONTENT_URI.buildUpon()
                     ContentUris.appendId(builder, now)
-                    ContentUris.appendId(builder, endTime)
+                    ContentUris.appendId(builder, endOfDay)
 
                     val projection = arrayOf(
                         CalendarContract.Instances.TITLE, 
@@ -781,7 +774,11 @@ jobs:
                         builder.build(), projection, null, null, sortOrder
                     )?.use { cursor ->
                         var hasEvents = false
-                        var eventCount = 0
+                        var displayedCount = 0
+                        var totalEventsToday = 0
+
+                        val twoHoursFromNow = now + (2 * 60 * 60 * 1000)
+
                         while (cursor.moveToNext()) {
                             val titleStr = cursor.getString(0) ?: "Evento"
                             val begin = cursor.getLong(1)
@@ -796,70 +793,79 @@ jobs:
                                 }
                             }
 
-                            if (viewMode == 0 && end <= now) {
-                                continue
-                            }
+                            if (end <= now) continue
                             
-                            if (seenEvents.contains(titleStr)) continue
-                            seenEvents.add(titleStr)
+                            // SE COMPARA TÍTULO + HORA DE INICIO PARA NO DESCHARTAR CITAS REPETIDAS EN HORARIOS DISTINTOS
+                            val eventKey = "${titleStr}_${begin}"
+                            if (seenEvents.contains(eventKey)) continue
+                            seenEvents.add(eventKey)
                             
                             hasEvents = true
-                            eventCount++
+                            totalEventsToday++
 
-                            if (eventCount > 4) {
-                                val overflowMsg = if (viewMode == 1) "... y más eventos hoy" else "... y más eventos próximos"
-                                htmlText.append("<font color='#AAAAAA'>$overflowMsg</font>")
-                                break
-                            }
-                            
-                            var minutesLeft = ((begin - now) / 60000).toInt()
-                            if (minutesLeft < 0) minutesLeft = 0
-                            
-                            var flair = "📅"
-                            val lowerTitle = titleStr.lowercase()
-                            when {
-                                lowerTitle.contains("dentist") -> flair = "🦷"
-                                lowerTitle.contains("médic") || lowerTitle.contains("medic") || lowerTitle.contains("hospital") || lowerTitle.contains("consulta") || lowerTitle.contains("sergas") -> flair = "⚕️"
-                                lowerTitle.contains("baloncesto") || lowerTitle.contains("basket") || lowerTitle.contains("obradoiro") -> flair = "🏀"
-                                lowerTitle.contains("tenis") || lowerTitle.contains("pádel") || lowerTitle.contains("padel") -> flair = "🎾"
-                                lowerTitle.contains("fútbol") || lowerTitle.contains("futbol") || lowerTitle.contains("futsal") -> flair = "⚽"
-                                lowerTitle.contains("piscina") || lowerTitle.contains("natación") || lowerTitle.contains("natacion") || lowerTitle.contains("swolf") -> flair = "🏊"
-                                lowerTitle.contains("vuel") || lowerTitle.contains("avión") || lowerTitle.contains("avion") || lowerTitle.contains("flight") -> flair = "✈️"
-                                lowerTitle.contains("tren") || lowerTitle.contains("renfe") || lowerTitle.contains("ave") || lowerTitle.contains("alvia") -> flair = "🚆"
-                                lowerTitle.contains("hotel") || lowerTitle.contains("reserva") || lowerTitle.contains("b&b") -> flair = "🏨"
-                                lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
+                            if (viewMode == 0 && begin > twoHoursFromNow) {
+                                continue
                             }
 
-                            val timeText = if (isAllDay) {
-                                "Todo el día"
-                            } else {
-                                if (viewMode == 1) {
-                                    val evCal = Calendar.getInstance().apply { timeInMillis = begin }
-                                    String.format(Locale.getDefault(), "%02d:%02d", evCal.get(Calendar.HOUR_OF_DAY), evCal.get(Calendar.MINUTE))
+                            val maxVisible = if (viewMode == 0) 2 else 4
+
+                            if (displayedCount < maxVisible) {
+                                displayedCount++
+                                var minutesLeft = ((begin - now) / 60000).toInt()
+                                if (minutesLeft < 0) minutesLeft = 0
+                                
+                                var flair = "📅"
+                                val lowerTitle = titleStr.lowercase()
+                                when {
+                                    lowerTitle.contains("dentist") -> flair = "🦷"
+                                    lowerTitle.contains("médic") || lowerTitle.contains("medic") || lowerTitle.contains("hospital") || lowerTitle.contains("consulta") || lowerTitle.contains("sergas") -> flair = "⚕️"
+                                    lowerTitle.contains("baloncesto") || lowerTitle.contains("basket") || lowerTitle.contains("obradoiro") -> flair = "🏀"
+                                    lowerTitle.contains("tenis") || lowerTitle.contains("pádel") || lowerTitle.contains("padel") -> flair = "🎾"
+                                    lowerTitle.contains("fútbol") || lowerTitle.contains("futbol") || lowerTitle.contains("futsal") -> flair = "⚽"
+                                    lowerTitle.contains("piscina") || lowerTitle.contains("natación") || lowerTitle.contains("natacion") || lowerTitle.contains("swolf") -> flair = "🏊"
+                                    lowerTitle.contains("vuel") || lowerTitle.contains("avión") || lowerTitle.contains("avion") || lowerTitle.contains("flight") -> flair = "✈️"
+                                    lowerTitle.contains("tren") || lowerTitle.contains("renfe") || lowerTitle.contains("ave") || lowerTitle.contains("alvia") -> flair = "🚆"
+                                    lowerTitle.contains("hotel") || lowerTitle.contains("reserva") || lowerTitle.contains("b&b") -> flair = "🏨"
+                                    lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
+                                }
+
+                                val timeText = if (isAllDay) {
+                                    "Todo el día"
                                 } else {
-                                    when {
-                                        minutesLeft <= 0 -> "Ahora"
-                                        minutesLeft <= 60 -> "$minutesLeft min"
-                                        minutesLeft <= 90 -> "Menos de 1h y media"
-                                        else -> "Menos de 2 horas"
+                                    if (viewMode == 1) {
+                                        val evCal = Calendar.getInstance().apply { timeInMillis = begin }
+                                        String.format(Locale.getDefault(), "%02d:%02d", evCal.get(Calendar.HOUR_OF_DAY), evCal.get(Calendar.MINUTE))
+                                    } else {
+                                        when {
+                                            minutesLeft <= 0 -> "Ahora"
+                                            minutesLeft <= 60 -> "$minutesLeft min"
+                                            minutesLeft <= 90 -> "Menos de 1h y media"
+                                            else -> "Menos de 2 horas"
+                                        }
                                     }
                                 }
-                            }
 
-                            val hexColor = if (isAllDay) {
-                                "#4CFF4C"
-                            } else {
-                                when {
-                                    minutesLeft <= 15 -> "#FF4C4C"
-                                    minutesLeft <= 60 -> "#FFA500"
-                                    else -> "#4CFF4C"
+                                val hexColor = if (isAllDay) {
+                                    "#4CFF4C"
+                                } else {
+                                    when {
+                                        minutesLeft <= 15 -> "#FF4C4C"
+                                        minutesLeft <= 60 -> "#FFA500"
+                                        else -> "#4CFF4C"
+                                    }
                                 }
-                            }
 
-                            htmlText.append("<font color='$hexColor'>$flair $titleStr &nbsp;•&nbsp; $timeText</font><br>")
+                                htmlText.append("<font color='$hexColor'>$flair $titleStr &nbsp;•&nbsp; $timeText</font><br>")
+                            }
                         }
                         
-                        if (!hasEvents) {
+                        if (hasEvents) {
+                            val remaining = totalEventsToday - displayedCount
+                            if (remaining > 0) {
+                                val overflowMsg = if (viewMode == 1) "... y $remaining más hoy" else "... y más eventos hoy"
+                                htmlText.append("<font color='#AAAAAA'>$overflowMsg</font>")
+                            }
+                        } else {
                             val msg = if (viewMode == 1) "Sin eventos para hoy" else "Sin eventos en las próximas 2 horas"
                             htmlText.append("<font color='#AAAAAA'>$msg</font>")
                         }
@@ -897,5 +903,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v4.0-APK
+        name: DeUnVistazoXL-v4.1-alpha2-APK
         path: app/build/outputs/apk/debug/app-debug.apk
