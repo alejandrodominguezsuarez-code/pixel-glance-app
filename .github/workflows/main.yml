@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V4.1-Alpha2 (Fix Eventos Repetidos)
+name: Compilar Widget Pixel 6 Pro V4.1-Alpha3 (Fix Expression Kotlin)
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v4.1-Alpha2
+    - name: Generar Estructura Nativa v4.1-Alpha3
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 48
-                versionName = "4.1-alpha2"
+                versionCode = 49
+                versionName = "4.1-alpha3"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -795,7 +795,6 @@ jobs:
 
                             if (end <= now) continue
                             
-                            // SE COMPARA TÍTULO + HORA DE INICIO PARA NO DESCHARTAR CITAS REPETIDAS EN HORARIOS DISTINTOS
                             val eventKey = "${titleStr}_${begin}"
                             if (seenEvents.contains(eventKey)) continue
                             seenEvents.add(eventKey)
@@ -829,13 +828,14 @@ jobs:
                                     lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
                                 }
 
-                                val timeText = if (isAllDay) {
-                                    "Todo el día"
-                                } else {
-                                    if (viewMode == 1) {
+                                // SINTAXIS KOTLIN CORREGIDA
+                                val timeText = when {
+                                    isAllDay -> "Todo el día"
+                                    viewMode == 1 -> {
                                         val evCal = Calendar.getInstance().apply { timeInMillis = begin }
                                         String.format(Locale.getDefault(), "%02d:%02d", evCal.get(Calendar.HOUR_OF_DAY), evCal.get(Calendar.MINUTE))
-                                    } else {
+                                    }
+                                    else -> {
                                         when {
                                             minutesLeft <= 0 -> "Ahora"
                                             minutesLeft <= 60 -> "$minutesLeft min"
@@ -903,5 +903,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v4.1-alpha2-APK
+        name: DeUnVistazoXL-v4.1-alpha3-APK
         path: app/build/outputs/apk/debug/app-debug.apk
