@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V4.0-Alpha3 (Animación Gotas Cayendo)
+name: Compilar Widget Pixel 6 Pro V4.0-RELEASE (Multi-Clima Completo)
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v4.0-Alpha3
+    - name: Generar Estructura Nativa v4.0 Multi-Clima
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 42
-                versionName = "4.0-alpha3"
+                versionCode = 45
+                versionName = "4.0"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -101,6 +101,7 @@ jobs:
         </manifest>
         EOF
 
+        # 1. CRISTAL OSCURO ESTÁNDAR
         cat << 'EOF' > app/src/main/res/drawable/bg_dark_glass.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
@@ -109,8 +110,8 @@ jobs:
         </shape>
         EOF
 
-        # FOTOGRAMA 1: Gotas Finitas Arriba
-        cat << 'EOF' > app/src/main/res/drawable/ic_rain_frame_1.xml
+        # 2. CAPA DE LLUVIA
+        cat << 'EOF' > app/src/main/res/drawable/ic_rain_drops_pattern.xml
         <?xml version="1.0" encoding="utf-8"?>
         <vector xmlns:android="http://schemas.android.com/apk/res/android"
             android:width="200dp" android:height="200dp"
@@ -123,44 +124,6 @@ jobs:
         </vector>
         EOF
 
-        # FOTOGRAMA 2: Gotas Desplazadas Hacia Abajo
-        cat << 'EOF' > app/src/main/res/drawable/ic_rain_frame_2.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <vector xmlns:android="http://schemas.android.com/apk/res/android"
-            android:width="200dp" android:height="200dp"
-            android:viewportWidth="100" android:viewportHeight="100">
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.30" android:pathData="M15,25 C15,25 13,28 13,29 C13,30 14,31 15,31 C16,31 17,30 17,29 Z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.25" android:pathData="M50,40 C50,40 48,43 48,44 C48,45 49,46 50,46 C51,46 52,45 52,44 Z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.30" android:pathData="M80,20 C80,20 78,23 78,24 C78,25 79,26 80,26 C81,26 82,25 82,24 Z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.20" android:pathData="M30,65 C30,65 28,68 28,69 C28,70 29,71 30,71 C31,71 32,70 32,69 Z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.25" android:pathData="M70,75 C70,75 68,78 68,79 C68,80 69,81 70,81 C71,81 72,80 72,79 Z" />
-        </vector>
-        EOF
-
-        # FOTOGRAMA 3: Gotas Desplazadas al Final
-        cat << 'EOF' > app/src/main/res/drawable/ic_rain_frame_3.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <vector xmlns:android="http://schemas.android.com/apk/res/android"
-            android:width="200dp" android:height="200dp"
-            android:viewportWidth="100" android:viewportHeight="100">
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.30" android:pathData="M15,40 C15,40 13,43 13,44 C13,45 14,46 15,46 C16,46 17,45 17,44 Z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.25" android:pathData="M50,55 C50,55 48,58 48,59 C48,60 49,61 50,61 C51,61 52,60 52,59 Z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.30" android:pathData="M80,35 C80,35 78,38 78,39 C78,40 79,41 80,41 C81,41 82,40 82,39 Z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.20" android:pathData="M30,80 C30,80 28,83 28,84 C28,85 29,86 30,86 C31,86 32,85 32,84 Z" />
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.25" android:pathData="M70,90 C70,90 68,93 68,94 C68,95 69,96 70,96 C71,96 72,95 72,94 Z" />
-        </vector>
-        EOF
-
-        # LAYER-LIST ANIMADO DE GOTAS
-        cat << 'EOF' > app/src/main/res/drawable/bg_rain_anim.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <animation-list xmlns:android="http://schemas.android.com/apk/res/android" android:oneshot="false">
-            <item android:drawable="@drawable/ic_rain_frame_1" android:duration="400" />
-            <item android:drawable="@drawable/ic_rain_frame_2" android:duration="400" />
-            <item android:drawable="@drawable/ic_rain_frame_3" android:duration="400" />
-        </animation-list>
-        EOF
-
         cat << 'EOF' > app/src/main/res/drawable/bg_rain_glass.xml
         <?xml version="1.0" encoding="utf-8"?>
         <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
@@ -170,8 +133,60 @@ jobs:
                     <corners android:radius="24dp" />
                 </shape>
             </item>
-            <item android:drawable="@drawable/bg_rain_anim" />
+            <item android:drawable="@drawable/ic_rain_drops_pattern" />
         </layer-list>
+        EOF
+
+        # 3. CAPA DE NIEVE
+        cat << 'EOF' > app/src/main/res/drawable/ic_snow_flakes_pattern.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <vector xmlns:android="http://schemas.android.com/apk/res/android"
+            android:width="200dp" android:height="200dp"
+            android:viewportWidth="100" android:viewportHeight="100">
+            <circle android:cx="20" android:cy="15" android:r="2" android:fillColor="#FFFFFF" android:fillAlpha="0.40"/>
+            <circle android:cx="60" android:cy="30" android:r="1.5" android:fillColor="#FFFFFF" android:fillAlpha="0.35"/>
+            <circle android:cx="85" android:cy="10" android:r="2.5" android:fillColor="#FFFFFF" android:fillAlpha="0.30"/>
+            <circle android:cx="35" android:cy="65" android:r="2" android:fillColor="#FFFFFF" android:fillAlpha="0.35"/>
+            <circle android:cx="75" android:cy="80" android:r="1.8" android:fillColor="#FFFFFF" android:fillAlpha="0.40"/>
+        </vector>
+        EOF
+
+        cat << 'EOF' > app/src/main/res/drawable/bg_snow_glass.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+            <item>
+                <shape>
+                    <solid android:color="#B31A2633" />
+                    <corners android:radius="24dp" />
+                </shape>
+            </item>
+            <item android:drawable="@drawable/ic_snow_flakes_pattern" />
+        </layer-list>
+        EOF
+
+        # 4. CAPA DE NIEGLA
+        cat << 'EOF' > app/src/main/res/drawable/bg_fog_glass.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <gradient
+                android:startColor="#B32B3238"
+                android:endColor="#B31A1E21"
+                android:angle="90" />
+            <corners android:radius="24dp" />
+        </shape>
+        EOF
+
+        # 5. CAPA DE TORMENTA
+        cat << 'EOF' > app/src/main/res/drawable/bg_storm_glass.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <gradient
+                android:startColor="#CC2A1B3D"
+                android:endColor="#B30F0A1A"
+                android:angle="135" />
+            <corners android:radius="24dp" />
+            <stroke android:width="1dp" android:color="#4D9C27B0"/>
+        </shape>
         EOF
 
         cat << 'EOF' > app/src/main/res/drawable/bg_dynamic.xml
@@ -190,7 +205,7 @@ jobs:
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="Configuración del Widget" android:textSize="22sp" android:textStyle="bold" android:layout_marginBottom="16dp"/>
             <RadioGroup android:id="@+id/rg_background" android:layout_width="match_parent" android:layout_height="wrap_content">
-                <RadioButton android:id="@+id/rb_dark" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cristal Oscuro (Recomendado)" android:checked="true"/>
+                <RadioButton android:id="@+id/rb_dark" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cristal Oscuro Multi-Clima (Recomendado)" android:checked="true"/>
                 <RadioButton android:id="@+id/rb_trans" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Totalmente Transparente"/>
                 <RadioButton android:id="@+id/rb_dyn" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dinámico (Material You)"/>
             </RadioGroup>
@@ -546,11 +561,26 @@ jobs:
                                 val windGusts = currentObj.optDouble("wind_gusts_10m", windSpeed)
                                 val precipitation = currentObj.optDouble("precipitation", 0.0)
 
+                                // ==========================================
+                                // MOTOR DINÁMICO MULTI-CLIMA V4.0
+                                // ==========================================
                                 if (bgChoice == 0) {
-                                    if (precipitation >= 0.1) {
-                                        views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_rain_glass)
-                                    } else {
-                                        views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dark_glass)
+                                    when {
+                                        weatherCode in listOf(95, 96, 99) -> {
+                                            views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_storm_glass)
+                                        }
+                                        weatherCode in listOf(71, 73, 75, 77) -> {
+                                            views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_snow_glass)
+                                        }
+                                        precipitation >= 0.1 || weatherCode in listOf(51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82) -> {
+                                            views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_rain_glass)
+                                        }
+                                        weatherCode in listOf(45, 48) -> {
+                                            views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_fog_glass)
+                                        }
+                                        else -> {
+                                            views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dark_glass)
+                                        }
                                     }
                                 } else if (bgChoice == 1) {
                                     views.setInt(R.id.widget_container, "setBackgroundColor", android.graphics.Color.TRANSPARENT)
@@ -870,5 +900,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v4.0-alpha3-APK
+        name: DeUnVistazoXL-v4.0-APK
         path: app/build/outputs/apk/debug/app-debug.apk
