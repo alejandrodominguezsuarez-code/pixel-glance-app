@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V4.1-Alpha6 (Fix Kotlin Blindado)
+name: Compilar Widget Pixel 6 Pro V4.1-Alpha8 (Fix Definitivo Expresión Kotlin)
 
 on:
   workflow_dispatch:
@@ -22,7 +22,7 @@ jobs:
         gradle-version: '8.4'
         cache-disabled: true
 
-    - name: Generar Estructura Nativa v4.1-Alpha6
+    - name: Generar Estructura Nativa v4.1-Alpha8
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -58,8 +58,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 52
-                versionName = "4.1-alpha6"
+                versionCode = 54
+                versionName = "4.1-alpha8"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -828,32 +828,44 @@ jobs:
                                     lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
                                 }
 
-                                // REESCRITURA KOTLIN TOTALMENTE BLINDADA PARA EVITAR EL ERROR DE COMPILADOR
-                                val timeText: String
+                                // VARIABLES MUTABLES CON ASIGNACIÓN SECUENCIAL PURA (IMPOSIBLE QUE EL COMPILADOR SE QUEJE)
+                                var timeText: String = "Menos de 2 horas"
                                 if (isAllDay) {
                                     timeText = "Todo el día"
-                                } else if (viewMode == 1) {
-                                    val evCal = Calendar.getInstance().apply { timeInMillis = begin }
-                                    timeText = String.format(Locale.getDefault(), "%02d:%02d", evCal.get(Calendar.HOUR_OF_DAY), evCal.get(Calendar.MINUTE))
-                                } else if (minutesLeft <= 0) {
-                                    timeText = "Ahora"
-                                } else if (minutesLeft <= 60) {
-                                    timeText = "$minutesLeft min"
-                                } else if (minutesLeft <= 90) {
-                                    timeText = "Menos de 1h y media"
                                 } else {
-                                    timeText = "Menos de 2 horas"
+                                    if (viewMode == 1) {
+                                        val evCal = Calendar.getInstance().apply { timeInMillis = begin }
+                                        timeText = String.format(Locale.getDefault(), "%02d:%02d", evCal.get(Calendar.HOUR_OF_DAY), evCal.get(Calendar.MINUTE))
+                                    } else {
+                                        if (minutesLeft <= 0) {
+                                            timeText = "Ahora"
+                                        } else {
+                                            if (minutesLeft <= 60) {
+                                                timeText = "$minutesLeft min"
+                                            } else {
+                                                if (minutesLeft <= 90) {
+                                                    timeText = "Menos de 1h y media"
+                                                } else {
+                                                    timeText = "Menos de 2 horas"
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
 
-                                val hexColor: String
+                                var hexColor: String = "#4CFF4C"
                                 if (isAllDay) {
                                     hexColor = "#4CFF4C"
-                                } else if (minutesLeft <= 15) {
-                                    hexColor = "#FF4C4C"
-                                } else if (minutesLeft <= 60) {
-                                    hexColor = "#FFA500"
                                 } else {
-                                    hexColor = "#4CFF4C"
+                                    if (minutesLeft <= 15) {
+                                        hexColor = "#FF4C4C"
+                                    } else {
+                                        if (minutesLeft <= 60) {
+                                            hexColor = "#FFA500"
+                                        } else {
+                                            hexColor = "#4CFF4C"
+                                        }
+                                    }
                                 }
 
                                 htmlText.append("<font color='$hexColor'>$flair $titleStr &nbsp;•&nbsp; $timeText</font><br>")
@@ -904,5 +916,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v4.1-alpha6-APK
+        name: DeUnVistazoXL-v4.1-alpha8-APK
         path: app/build/outputs/apk/debug/app-debug.apk
