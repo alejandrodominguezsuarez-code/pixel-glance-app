@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V4.0-RELEASE (Multi-Clima Completo)
+name: Compilar Widget Pixel 6 Pro V4.0-RELEASE (Fix AAPT Snow Vector)
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v4.0 Multi-Clima
+    - name: Generar Estructura Nativa v4.0 (Fix Vector Nieve)
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,7 +57,7 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 45
+                versionCode = 46
                 versionName = "4.0"
             }
             compileOptions {
@@ -137,17 +137,17 @@ jobs:
         </layer-list>
         EOF
 
-        # 3. CAPA DE NIEVE
+        # 3. CAPA DE NIEVE (CORREGIDA SINTAXIS PATH)
         cat << 'EOF' > app/src/main/res/drawable/ic_snow_flakes_pattern.xml
         <?xml version="1.0" encoding="utf-8"?>
         <vector xmlns:android="http://schemas.android.com/apk/res/android"
             android:width="200dp" android:height="200dp"
             android:viewportWidth="100" android:viewportHeight="100">
-            <circle android:cx="20" android:cy="15" android:r="2" android:fillColor="#FFFFFF" android:fillAlpha="0.40"/>
-            <circle android:cx="60" android:cy="30" android:r="1.5" android:fillColor="#FFFFFF" android:fillAlpha="0.35"/>
-            <circle android:cx="85" android:cy="10" android:r="2.5" android:fillColor="#FFFFFF" android:fillAlpha="0.30"/>
-            <circle android:cx="35" android:cy="65" android:r="2" android:fillColor="#FFFFFF" android:fillAlpha="0.35"/>
-            <circle android:cx="75" android:cy="80" android:r="1.8" android:fillColor="#FFFFFF" android:fillAlpha="0.40"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.40" android:pathData="M20,13 A2,2 0 1,0 20,17 A2,2 0 1,0 20,13 Z"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.35" android:pathData="M60,28.5 A1.5,1.5 0 1,0 60,31.5 A1.5,1.5 0 1,0 60,28.5 Z"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.30" android:pathData="M85,7.5 A2.5,2.5 0 1,0 85,12.5 A2.5,2.5 0 1,0 85,7.5 Z"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.35" android:pathData="M35,63 A2,2 0 1,0 35,67 A2,2 0 1,0 35,63 Z"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.40" android:pathData="M75,78.2 A1.8,1.8 0 1,0 75,81.8 A1.8,1.8 0 1,0 75,78.2 Z"/>
         </vector>
         EOF
 
@@ -561,9 +561,6 @@ jobs:
                                 val windGusts = currentObj.optDouble("wind_gusts_10m", windSpeed)
                                 val precipitation = currentObj.optDouble("precipitation", 0.0)
 
-                                // ==========================================
-                                // MOTOR DINÁMICO MULTI-CLIMA V4.0
-                                // ==========================================
                                 if (bgChoice == 0) {
                                     when {
                                         weatherCode in listOf(95, 96, 99) -> {
