@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V3.6 (Formato Adaptativo 3/4 Bloques)
+name: Compilar Widget Pixel 6 Pro V3.8 (Botonera 2x1 en Columna Corta)
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v3.6
+    - name: Generar Estructura Nativa v3.8
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 36
-                versionName = "3.6"
+                versionCode = 38
+                versionName = "3.8"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -141,38 +141,48 @@ jobs:
             android:layout_height="match_parent"
             android:padding="14dp">
             
+            <!-- CONTENEDOR DE BOTONES 2x1 (2 arriba, 1 abajo) -->
             <LinearLayout
                 android:id="@+id/action_buttons"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentTop="true"
                 android:layout_alignParentRight="true"
-                android:orientation="horizontal">
+                android:orientation="vertical"
+                android:gravity="end">
                 
-                <TextView
-                    android:id="@+id/btn_settings"
+                <!-- Fila Superior: Ajustes y Refresco -->
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="⚙️"
-                    android:textSize="18sp"
-                    android:paddingEnd="12dp"
-                    android:background="?android:selectableItemBackground" />
+                    android:orientation="horizontal">
                     
-                <TextView
-                    android:id="@+id/btn_refresh"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🔄"
-                    android:textSize="18sp"
-                    android:paddingEnd="12dp"
-                    android:background="?android:selectableItemBackground" />
+                    <TextView
+                        android:id="@+id/btn_settings"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="⚙️"
+                        android:textSize="17sp"
+                        android:paddingEnd="10dp"
+                        android:background="?android:selectableItemBackground" />
+                        
+                    <TextView
+                        android:id="@+id/btn_refresh"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔄"
+                        android:textSize="17sp"
+                        android:background="?android:selectableItemBackground" />
+                </LinearLayout>
 
+                <!-- Fila Inferior: Alternar Vista -->
                 <TextView
                     android:id="@+id/btn_toggle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="➡️"
-                    android:textSize="18sp"
+                    android:textSize="17sp"
+                    android:layout_marginTop="2dp"
                     android:background="?android:selectableItemBackground" />
             </LinearLayout>
 
@@ -405,7 +415,6 @@ jobs:
                     val pendingWeather = PendingIntent.getActivity(context, appWidgetId + 3000, weatherIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                     views.setOnClickPendingIntent(R.id.widget_weather_main, pendingWeather)
 
-                    // INTENT INTERACTIVO DE LUNA
                     val moonIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=fase+lunar+hoy")).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     }
@@ -565,7 +574,7 @@ jobs:
                                 } catch (e: Exception) {}
 
                                 // ==========================================
-                                // MOTOR DE COLA DE PRIORIDADES v3.6 (ADAPTATIVO)
+                                // MOTOR DE COLA DE PRIORIDADES v3.8
                                 // ==========================================
                                 val displayQueue = mutableListOf<String>()
                                 var hasWindAlert = false
@@ -612,7 +621,7 @@ jobs:
                                 if (aqiText.isNotEmpty()) displayQueue.add(aqiText)
                                 displayQueue.add("Luna $moonPhaseIcon")
 
-                                // SELECCIÓN ADAPTATIVA DE FORMATO
+                                // SELECCIÓN ADAPTATIVA (4 BLOQUES MAX)
                                 val finalSubList = displayQueue.take(4)
                                 val formattedList = if (finalSubList.size >= 4) {
                                     finalSubList.map { item ->
@@ -760,7 +769,7 @@ jobs:
                         
                         if (!hasEvents) {
                             val msg = if (viewMode == 1) "Sin eventos para hoy" else "Sin eventos en las próximas 2 horas"
-                            htmlText.append("<font color='#AAAAAA'>$msg</msg>")
+                            htmlText.append("<font color='#AAAAAA'>$msg</font>")
                         }
                     } ?: run {
                         htmlText.append("<font color='#AAAAAA'>Error leyendo calendario</font>")
@@ -796,5 +805,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v3.6-APK
+        name: DeUnVistazoXL-v3.8-APK
         path: app/build/outputs/apk/debug/app-debug.apk
