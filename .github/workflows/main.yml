@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V3.3 Meteogalicia
+name: Compilar Widget Pixel 6 Pro V3.4 (Cola Ampliada + Meteogalicia)
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v3.3
+    - name: Generar Estructura Nativa v3.4
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 33
-                versionName = "3.3"
+                versionCode = 34
+                versionName = "3.4"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -557,12 +557,12 @@ jobs:
                                 } catch (e: Exception) {}
 
                                 // ==========================================
-                                // MOTOR DE COLA DE PRIORIDADES v3.3 (METEOGALICIA)
+                                // MOTOR DE COLA DE PRIORIDADES v3.4 (4 BLOQUES MAX)
                                 // ==========================================
                                 val displayQueue = mutableListOf<String>()
                                 var hasWindAlert = false
 
-                                // 1. Tormentas Eléctricas (Rojo directo)
+                                // 1. Tormentas Eléctricas
                                 if (weatherCode in listOf(95, 96, 99)) {
                                     displayQueue.add("<font color='#FF4C4C'>⚡ Tormenta</font>")
                                 }
@@ -579,15 +579,14 @@ jobs:
                                     hasWindAlert = true
                                 }
 
-                                // 3. Precipitación Horaria (Meteogalicia: 15 / 30 / 60 mm/h)
+                                // 3. Precipitación Horaria (Meteogalicia vs Informativa)
                                 if (precipitation >= 60.0) {
                                     displayQueue.add("<font color='#FF4C4C'>🌧️ $precipitation l/m²</font>")
                                 } else if (precipitation >= 30.0) {
                                     displayQueue.add("<font color='#FFA500'>🌧️ $precipitation l/m²</font>")
                                 } else if (precipitation >= 15.0) {
                                     displayQueue.add("<font color='#FFD700'>🌧️ $precipitation l/m²</font>")
-                                } else if (precipitation >= 0.1) { 
-                                    // Chubasco moderado no peligroso pero informativo en blanco/gris estándar
+                                } else if (precipitation >= 0.1) {
                                     displayQueue.add("🌧️ $precipitation l/m²")
                                 }
 
@@ -596,7 +595,7 @@ jobs:
                                     displayQueue.add("<font color='#FFD700'>❄️ Nieve</font>")
                                 }
 
-                                // 5. Elementos estándar
+                                // 5. Elementos Estándar
                                 if (!hasWindAlert) {
                                     val defaultWindStr = "$windIcon ${windSpeed.toInt()}km/h"
                                     displayQueue.add(defaultWindStr)
@@ -605,8 +604,8 @@ jobs:
                                 if (aqiText.isNotEmpty()) displayQueue.add(aqiText)
                                 displayQueue.add("Luna: $moonPhaseIcon")
 
-                                // 6. Tomar máximo 3 elementos para la Línea 2
-                                val finalSubList = displayQueue.take(3)
+                                // AMPLIAREMOS A 4 ELEMENTOS EN LA LÍNEA 2
+                                val finalSubList = displayQueue.take(4)
                                 val subWeatherStr = finalSubList.joinToString(" &nbsp;•&nbsp; ")
 
                                 val mainWeatherStr = "$weatherIcon $locality • ${tempVal}°C"
@@ -780,5 +779,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v3.3-APK
+        name: DeUnVistazoXL-v3.4-APK
         path: app/build/outputs/apk/debug/app-debug.apk
