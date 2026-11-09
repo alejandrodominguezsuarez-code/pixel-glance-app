@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V3.5 (Fix Solapamiento Botonera con Luna Completa)
+name: Compilar Widget Pixel 6 Pro V3.5 (Luna Interactiva & Formato Corto)
 
 on:
   workflow_dispatch:
@@ -404,7 +404,13 @@ jobs:
                     }
                     val pendingWeather = PendingIntent.getActivity(context, appWidgetId + 3000, weatherIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                     views.setOnClickPendingIntent(R.id.widget_weather_main, pendingWeather)
-                    views.setOnClickPendingIntent(R.id.widget_weather_sub, pendingWeather)
+
+                    // CLICK EN LA LÍNEA 2 (LUNA & DETALLES ASTRONÓMICOS / AQI)
+                    val moonIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=fase+lunar+hoy")).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    val pendingMoon = PendingIntent.getActivity(context, appWidgetId + 5000, moonIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+                    views.setOnClickPendingIntent(R.id.widget_weather_sub, pendingMoon)
 
                     if (viewMode == 1) {
                         views.setViewVisibility(R.id.widget_weather_main, View.GONE)
@@ -604,8 +610,8 @@ jobs:
                                 
                                 if (aqiText.isNotEmpty()) displayQueue.add(aqiText)
                                 
-                                // Formato completo original mantenido
-                                displayQueue.add("Luna: $moonPhaseIcon")
+                                // Formato corto sin dos puntos
+                                displayQueue.add("Luna $moonPhaseIcon")
 
                                 val finalSubList = displayQueue.take(4)
                                 val subWeatherStr = finalSubList.joinToString(" &nbsp;•&nbsp; ")
