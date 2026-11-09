@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V4.1-Alpha4 (Fix Completo Kotlin)
+name: Compilar Widget Pixel 6 Pro V4.1-Alpha5 (Fix Kotlin Definitivo)
 
 on:
   workflow_dispatch:
@@ -20,8 +20,9 @@ jobs:
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.4'
+        cache-disabled: true # Desactivamos la caché para evitar los errores 503 de GitHub
 
-    - name: Generar Estructura Nativa v4.1-Alpha4
+    - name: Generar Estructura Nativa v4.1-Alpha5
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +58,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 50
-                versionName = "4.1-alpha4"
+                versionCode = 51
+                versionName = "4.1-alpha5"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -827,25 +828,28 @@ jobs:
                                     lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
                                 }
 
-                                // REESCRITURA KOTLIN TOTALMENTE PLANA (Sin "if" anidados)
-                                val timeText = when {
-                                    isAllDay -> "Todo el día"
-                                    viewMode == 1 -> {
-                                        val evCal = Calendar.getInstance().apply { timeInMillis = begin }
-                                        String.format(Locale.getDefault(), "%02d:%02d", evCal.get(Calendar.HOUR_OF_DAY), evCal.get(Calendar.MINUTE))
-                                    }
-                                    minutesLeft <= 0 -> "Ahora"
-                                    minutesLeft <= 60 -> "$minutesLeft min"
-                                    minutesLeft <= 90 -> "Menos de 1h y media"
-                                    else -> "Menos de 2 horas"
+                                // REESCRITURA KOTLIN TOTALMENTE PLANA A VARIABLES MUTABLES
+                                var timeText = "Menos de 2 horas"
+                                if (isAllDay) {
+                                    timeText = "Todo el día"
+                                } else if (viewMode == 1) {
+                                    val evCal = Calendar.getInstance().apply { timeInMillis = begin }
+                                    timeText = String.format(Locale.getDefault(), "%02d:%02d", evCal.get(Calendar.HOUR_OF_DAY), evCal.get(Calendar.MINUTE))
+                                } else if (minutesLeft <= 0) {
+                                    timeText = "Ahora"
+                                } else if (minutesLeft <= 60) {
+                                    timeText = "$minutesLeft min"
+                                } else if (minutesLeft <= 90) {
+                                    timeText = "Menos de 1h y media"
                                 }
 
-                                // REESCRITURA KOTLIN TOTALMENTE PLANA (Sin "if" anidados)
-                                val hexColor = when {
-                                    isAllDay -> "#4CFF4C"
-                                    minutesLeft <= 15 -> "#FF4C4C"
-                                    minutesLeft <= 60 -> "#FFA500"
-                                    else -> "#4CFF4C"
+                                var hexColor = "#4CFF4C"
+                                if (!isAllDay) {
+                                    if (minutesLeft <= 15) {
+                                        hexColor = "#FF4C4C"
+                                    } else if (minutesLeft <= 60) {
+                                        hexColor = "#FFA500"
+                                    }
                                 }
 
                                 htmlText.append("<font color='$hexColor'>$flair $titleStr &nbsp;•&nbsp; $timeText</font><br>")
@@ -896,5 +900,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v4.1-alpha4-APK
+        name: DeUnVistazoXL-v4.1-alpha5-APK
         path: app/build/outputs/apk/debug/app-debug.apk
