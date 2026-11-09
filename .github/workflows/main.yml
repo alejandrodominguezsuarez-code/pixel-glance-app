@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V3.4 (Cola Ampliada + Meteogalicia)
+name: Compilar Widget Pixel 6 Pro V3.5 (Fix Solapamiento Botonera con Luna Completa)
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v3.4
+    - name: Generar Estructura Nativa v3.5
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 34
-                versionName = "3.4"
+                versionCode = 35
+                versionName = "3.5"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -196,6 +196,7 @@ jobs:
                 android:layout_height="wrap_content"
                 android:layout_below="@id/widget_weather_main"
                 android:layout_alignParentLeft="true"
+                android:layout_toLeftOf="@id/action_buttons"
                 android:text="⬇️ • AQI: ..."
                 android:textColor="#E0E0E0"
                 android:textSize="12sp"
@@ -557,7 +558,7 @@ jobs:
                                 } catch (e: Exception) {}
 
                                 // ==========================================
-                                // MOTOR DE COLA DE PRIORIDADES v3.4 (4 BLOQUES MAX)
+                                // MOTOR DE COLA DE PRIORIDADES v3.5
                                 // ==========================================
                                 val displayQueue = mutableListOf<String>()
                                 var hasWindAlert = false
@@ -602,9 +603,10 @@ jobs:
                                 }
                                 
                                 if (aqiText.isNotEmpty()) displayQueue.add(aqiText)
+                                
+                                // Formato completo original mantenido
                                 displayQueue.add("Luna: $moonPhaseIcon")
 
-                                // AMPLIAREMOS A 4 ELEMENTOS EN LA LÍNEA 2
                                 val finalSubList = displayQueue.take(4)
                                 val subWeatherStr = finalSubList.joinToString(" &nbsp;•&nbsp; ")
 
@@ -779,5 +781,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v3.4-APK
+        name: DeUnVistazoXL-v3.5-APK
         path: app/build/outputs/apk/debug/app-debug.apk
