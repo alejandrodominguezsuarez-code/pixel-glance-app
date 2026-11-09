@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V4.1-Alpha3 (Fix Expression Kotlin)
+name: Compilar Widget Pixel 6 Pro V4.1-Alpha4 (Fix Completo Kotlin)
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v4.1-Alpha3
+    - name: Generar Estructura Nativa v4.1-Alpha4
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 49
-                versionName = "4.1-alpha3"
+                versionCode = 50
+                versionName = "4.1-alpha4"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -601,7 +601,7 @@ jobs:
                                 val msPerCycle = 2551442976L
                                 val currentMs = System.currentTimeMillis()
                                 var phasePercent = ((currentMs - knownNewMoon) % msPerCycle) / msPerCycle.toDouble()
-                                if (phasePercent < 0) phasePercent += 1.0
+                                if (phasePercent < 0) { phasePercent += 1.0 }
                                 
                                 val phaseIndex = Math.round(phasePercent * 8).toInt() % 8
                                 val moonPhaseIcon = when (phaseIndex) {
@@ -706,7 +706,7 @@ jobs:
                                     displayQueue.add(defaultWindStr)
                                 }
                                 
-                                if (aqiText.isNotEmpty()) displayQueue.add(aqiText)
+                                if (aqiText.isNotEmpty()) { displayQueue.add(aqiText) }
                                 displayQueue.add("Luna $moonPhaseIcon")
 
                                 val finalSubList = displayQueue.take(4)
@@ -792,10 +792,10 @@ jobs:
                                 }
                             }
 
-                            if (end <= now) continue
+                            if (end <= now) { continue }
                             
                             val eventKey = "${titleStr}_${begin}"
-                            if (seenEvents.contains(eventKey)) continue
+                            if (seenEvents.contains(eventKey)) { continue }
                             seenEvents.add(eventKey)
                             
                             hasEvents = true
@@ -810,7 +810,7 @@ jobs:
                             if (displayedCount < maxVisible) {
                                 displayedCount++
                                 var minutesLeft = ((begin - now) / 60000).toInt()
-                                if (minutesLeft < 0) minutesLeft = 0
+                                if (minutesLeft < 0) { minutesLeft = 0 }
                                 
                                 var flair = "📅"
                                 val lowerTitle = titleStr.lowercase()
@@ -827,30 +827,25 @@ jobs:
                                     lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
                                 }
 
+                                // REESCRITURA KOTLIN TOTALMENTE PLANA (Sin "if" anidados)
                                 val timeText = when {
                                     isAllDay -> "Todo el día"
                                     viewMode == 1 -> {
                                         val evCal = Calendar.getInstance().apply { timeInMillis = begin }
                                         String.format(Locale.getDefault(), "%02d:%02d", evCal.get(Calendar.HOUR_OF_DAY), evCal.get(Calendar.MINUTE))
                                     }
-                                    else -> {
-                                        when {
-                                            minutesLeft <= 0 -> "Ahora"
-                                            minutesLeft <= 60 -> "$minutesLeft min"
-                                            minutesLeft <= 90 -> "Menos de 1h y media"
-                                            else -> "Menos de 2 horas"
-                                        }
-                                    }
+                                    minutesLeft <= 0 -> "Ahora"
+                                    minutesLeft <= 60 -> "$minutesLeft min"
+                                    minutesLeft <= 90 -> "Menos de 1h y media"
+                                    else -> "Menos de 2 horas"
                                 }
 
-                                val hexColor = if (isAllDay) {
-                                    "#4CFF4C"
-                                } else {
-                                    when {
-                                        minutesLeft <= 15 -> "#FF4C4C"
-                                        minutesLeft <= 60 -> "#FFA500"
-                                        else -> "#4CFF4C"
-                                    }
+                                // REESCRITURA KOTLIN TOTALMENTE PLANA (Sin "if" anidados)
+                                val hexColor = when {
+                                    isAllDay -> "#4CFF4C"
+                                    minutesLeft <= 15 -> "#FF4C4C"
+                                    minutesLeft <= 60 -> "#FFA500"
+                                    else -> "#4CFF4C"
                                 }
 
                                 htmlText.append("<font color='$hexColor'>$flair $titleStr &nbsp;•&nbsp; $timeText</font><br>")
@@ -901,5 +896,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v4.1-alpha3-APK
+        name: DeUnVistazoXL-v4.1-alpha4-APK
         path: app/build/outputs/apk/debug/app-debug.apk
