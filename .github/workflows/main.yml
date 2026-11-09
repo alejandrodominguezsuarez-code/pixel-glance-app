@@ -101,7 +101,6 @@ jobs:
         </manifest>
         EOF
 
-        # DRAWABLES MULTI-CLIMA
         cat << 'EOF' > app/src/main/res/drawable/bg_dark_glass.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
@@ -828,7 +827,6 @@ jobs:
                                     lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
                                 }
 
-                                // SINTAXIS KOTLIN CORREGIDA
                                 val timeText = when {
                                     isAllDay -> "Todo el día"
                                     viewMode == 1 -> {
