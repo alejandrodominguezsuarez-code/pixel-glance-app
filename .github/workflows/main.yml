@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V4.1-alpha4 (Efectos Clima Expandidos)
+name: Compilar Widget Pixel 6 Pro V4.1-alpha5 (Efectos Clima Expandidos)
 
 on:
   workflow_dispatch:
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 42
-                versionName = "4.1-alpha4"
+                versionCode = 43
+                versionName = "4.1-alpha5"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -137,7 +137,7 @@ jobs:
         </layer-list>
         EOF
 
-        # 3. PATRÓN NIEVE Y CAPA COMPUESTA (CORREGIDO PARA AAPT)
+        # 3. PATRÓN NIEVE Y CAPA COMPUESTA
         cat << 'EOF' > app/src/main/res/drawable/ic_snow_flakes_pattern.xml
         <?xml version="1.0" encoding="utf-8"?>
         <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -165,15 +165,15 @@ jobs:
         </layer-list>
         EOF
 
-        # 4. PATRÓN NIEBLA Y CAPA COMPUESTA
+        # 4. PATRÓN NIEBLA Y CAPA COMPUESTA (REDISEÑADO SUTIL Y DESPLAZADO DE TEXTO)
         cat << 'EOF' > app/src/main/res/drawable/ic_fog_pattern.xml
         <?xml version="1.0" encoding="utf-8"?>
         <vector xmlns:android="http://schemas.android.com/apk/res/android"
             android:width="200dp" android:height="200dp"
             android:viewportWidth="100" android:viewportHeight="100">
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.15" android:pathData="M 10,25 Q 50,20 90,25 Q 50,30 10,25 Z"/>
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.12" android:pathData="M 05,45 Q 45,40 95,45 Q 45,50 05,45 Z"/>
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.18" android:pathData="M 15,68 Q 55,62 85,68 Q 55,74 15,68 Z"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.08" android:pathData="M 0,05 Q 50,02 100,05 L 100,18 Q 50,15 0,18 Z"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.06" android:pathData="M 0,22 Q 50,26 100,22 L 100,32 Q 50,35 0,32 Z"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.07" android:pathData="M 0,82 Q 50,78 100,82 L 100,95 Q 50,92 0,95 Z"/>
         </vector>
         EOF
 
@@ -922,5 +922,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v4.1-alpha4-APK
+        name: DeUnVistazoXL-v4.1-alpha5-APK
         path: app/build/outputs/apk/debug/app-debug.apk
