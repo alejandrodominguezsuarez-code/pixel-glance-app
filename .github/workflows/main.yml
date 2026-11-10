@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V4.1-alpha5 (Efectos Clima Expandidos)
+name: Compilar Widget Pixel 6 Pro V4.0-RELEASE (Efectos Clima Finales)
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Generar Estructura Nativa v4.1 Final
+    - name: Generar Estructura Nativa v4.0 Final
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 43
-                versionName = "4.1-alpha5"
+                versionCode = 40
+                versionName = "4.0"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -165,7 +165,7 @@ jobs:
         </layer-list>
         EOF
 
-        # 4. PATRÓN NIEBLA Y CAPA COMPUESTA (REDISEÑADO SUTIL Y DESPLAZADO DE TEXTO)
+        # 4. PATRÓN NIEBLA Y CAPA COMPUESTA
         cat << 'EOF' > app/src/main/res/drawable/ic_fog_pattern.xml
         <?xml version="1.0" encoding="utf-8"?>
         <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -922,5 +922,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v4.1-alpha5-APK
+        name: DeUnVistazoXL-v4.0-APK
         path: app/build/outputs/apk/debug/app-debug.apk
