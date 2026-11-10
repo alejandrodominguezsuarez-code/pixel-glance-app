@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V4.1-Alpha9 (Fix Línea 465)
+name: Compilar Widget Pixel 6 Pro V4.1-alpha3 (Efectos Clima Expandidos)
 
 on:
   workflow_dispatch:
@@ -20,9 +20,8 @@ jobs:
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.4'
-        cache-disabled: true
 
-    - name: Generar Estructura Nativa v4.1-Alpha9
+    - name: Generar Estructura Nativa v4.1 Final
       run: |
         mkdir -p app/src/main/java/com/alex/pixelglancewidget
         mkdir -p app/src/main/res/xml
@@ -58,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 55
-                versionName = "4.1-alpha9"
+                versionCode = 41
+                versionName = "4.1-alpha3"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -102,6 +101,7 @@ jobs:
         </manifest>
         EOF
 
+        # 1. BASE CRISTAL OSCURO
         cat << 'EOF' > app/src/main/res/drawable/bg_dark_glass.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
@@ -110,6 +110,7 @@ jobs:
         </shape>
         EOF
 
+        # 2. PATRÓN LLUVIA Y CAPA COMPUESTA
         cat << 'EOF' > app/src/main/res/drawable/ic_rain_drops_pattern.xml
         <?xml version="1.0" encoding="utf-8"?>
         <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -136,16 +137,18 @@ jobs:
         </layer-list>
         EOF
 
+        # 3. PATRÓN NIEVE Y CAPA COMPUESTA
         cat << 'EOF' > app/src/main/res/drawable/ic_snow_flakes_pattern.xml
         <?xml version="1.0" encoding="utf-8"?>
         <vector xmlns:android="http://schemas.android.com/apk/res/android"
             android:width="200dp" android:height="200dp"
             android:viewportWidth="100" android:viewportHeight="100">
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.40" android:pathData="M20,13 A2,2 0 1,0 20,17 A2,2 0 1,0 20,13 Z"/>
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.35" android:pathData="M60,28.5 A1.5,1.5 0 1,0 60,31.5 A1.5,1.5 0 1,0 60,28.5 Z"/>
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.30" android:pathData="M85,7.5 A2.5,2.5 0 1,0 85,12.5 A2.5,2.5 0 1,0 85,7.5 Z"/>
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.35" android:pathData="M35,63 A2,2 0 1,0 35,67 A2,2 0 1,0 35,63 Z"/>
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.40" android:pathData="M75,78.2 A1.8,1.8 0 1,0 75,81.8 A1.8,1.8 0 1,0 75,78.2 Z"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.35" android:pathData="M20,15 L20,25 M15,20 L25,20 M16,16 L24,24 M16,24 L24,16" strokeColor="#FFFFFF" strokeWidth="0.8"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.25" android:pathData="M75,30 L75,38 M71,34 L79,34 M72,31 L78,37 M72,37 L78,31" strokeColor="#FFFFFF" strokeWidth="0.8"/>
+            <circle android:cx="45" android:cy="12" android:r="1.5" android:fillColor="#FFFFFF" android:fillAlpha="0.4"/>
+            <circle android:cx="85" android:cy="70" android:r="2.0" android:fillColor="#FFFFFF" android:fillAlpha="0.3"/>
+            <circle android:cx="30" android:cy="65" android:r="1.2" android:fillColor="#FFFFFF" android:fillAlpha="0.35"/>
+            <circle android:cx="60" android:cy="80" android:r="1.8" android:fillColor="#FFFFFF" android:fillAlpha="0.25"/>
         </vector>
         EOF
 
@@ -154,7 +157,7 @@ jobs:
         <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
             <item>
                 <shape>
-                    <solid android:color="#B31A2633" />
+                    <solid android:color="#B3000000" />
                     <corners android:radius="24dp" />
                 </shape>
             </item>
@@ -162,27 +165,53 @@ jobs:
         </layer-list>
         EOF
 
-        cat << 'EOF' > app/src/main/res/drawable/bg_fog_glass.xml
+        # 4. PATRÓN NIEBLA Y CAPA COMPUESTA
+        cat << 'EOF' > app/src/main/res/drawable/ic_fog_pattern.xml
         <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <gradient
-                android:startColor="#B32B3238"
-                android:endColor="#B31A1E21"
-                android:angle="90" />
-            <corners android:radius="24dp" />
-        </shape>
+        <vector xmlns:android="http://schemas.android.com/apk/res/android"
+            android:width="200dp" android:height="200dp"
+            android:viewportWidth="100" android:viewportHeight="100">
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.15" android:pathData="M 10,25 Q 50,20 90,25 Q 50,30 10,25 Z"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.12" android:pathData="M 05,45 Q 45,40 95,45 Q 45,50 05,45 Z"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.18" android:pathData="M 15,68 Q 55,62 85,68 Q 55,74 15,68 Z"/>
+        </vector>
         EOF
 
-        cat << 'EOF' > app/src/main/res/drawable/bg_storm_glass.xml
+        cat << 'EOF' > app/src/main/res/drawable/bg_fog_glass.xml
         <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <gradient
-                android:startColor="#CC2A1B3D"
-                android:endColor="#B30F0A1A"
-                android:angle="135" />
-            <corners android:radius="24dp" />
-            <stroke android:width="1dp" android:color="#4D9C27B0"/>
-        </shape>
+        <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+            <item>
+                <shape>
+                    <solid android:color="#B3000000" />
+                    <corners android:radius="24dp" />
+                </shape>
+            </item>
+            <item android:drawable="@drawable/ic_fog_pattern" />
+        </layer-list>
+        EOF
+
+        # 5. PATRÓN TORMENTA Y CAPA COMPUESTA
+        cat << 'EOF' > app/src/main/res/drawable/ic_lightning_pattern.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <vector xmlns:android="http://schemas.android.com/apk/res/android"
+            android:width="200dp" android:height="200dp"
+            android:viewportWidth="100" android:viewportHeight="100">
+            <path android:fillColor="#FFD700" android:fillAlpha="0.35" android:pathData="M 75,5 L 63,35 L 73,35 L 58,65 L 65,42 L 57,42 Z"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.20" android:pathData="M 25,40 L 18,58 L 23,58 L 13,80 L 19,63 L 13,63 Z"/>
+        </vector>
+        EOF
+
+        cat << 'EOF' > app/src/main/res/drawable/bg_thunder_glass.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+            <item>
+                <shape>
+                    <solid android:color="#B3000000" />
+                    <corners android:radius="24dp" />
+                </shape>
+            </item>
+            <item android:drawable="@drawable/ic_lightning_pattern" />
+        </layer-list>
         EOF
 
         cat << 'EOF' > app/src/main/res/drawable/bg_dynamic.xml
@@ -201,7 +230,7 @@ jobs:
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="Configuración del Widget" android:textSize="22sp" android:textStyle="bold" android:layout_marginBottom="16dp"/>
             <RadioGroup android:id="@+id/rg_background" android:layout_width="match_parent" android:layout_height="wrap_content">
-                <RadioButton android:id="@+id/rb_dark" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cristal Oscuro Multi-Clima (Recomendado)" android:checked="true"/>
+                <RadioButton android:id="@+id/rb_dark" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cristal Oscuro (Recomendado)" android:checked="true"/>
                 <RadioButton android:id="@+id/rb_trans" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Totalmente Transparente"/>
                 <RadioButton android:id="@+id/rb_dyn" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dinámico (Material You)"/>
             </RadioGroup>
@@ -560,16 +589,16 @@ jobs:
                                 if (bgChoice == 0) {
                                     when {
                                         weatherCode in listOf(95, 96, 99) -> {
-                                            views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_storm_glass)
+                                            views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_thunder_glass)
                                         }
                                         weatherCode in listOf(71, 73, 75, 77) -> {
                                             views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_snow_glass)
                                         }
-                                        precipitation >= 0.1 || weatherCode in listOf(51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82) -> {
-                                            views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_rain_glass)
-                                        }
                                         weatherCode in listOf(45, 48) -> {
                                             views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_fog_glass)
+                                        }
+                                        weatherCode in listOf(51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82) || precipitation >= 0.1 -> {
+                                            views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_rain_glass)
                                         }
                                         else -> {
                                             views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.bg_dark_glass)
@@ -602,7 +631,7 @@ jobs:
                                 val msPerCycle = 2551442976L
                                 val currentMs = System.currentTimeMillis()
                                 var phasePercent = ((currentMs - knownNewMoon) % msPerCycle) / msPerCycle.toDouble()
-                                if (phasePercent < 0) { phasePercent += 1.0 }
+                                if (phasePercent < 0) phasePercent += 1.0
                                 
                                 val phaseIndex = Math.round(phasePercent * 8).toInt() % 8
                                 val moonPhaseIcon = when (phaseIndex) {
@@ -707,7 +736,7 @@ jobs:
                                     displayQueue.add(defaultWindStr)
                                 }
                                 
-                                if (aqiText.isNotEmpty()) { displayQueue.add(aqiText) }
+                                if (aqiText.isNotEmpty()) displayQueue.add(aqiText)
                                 displayQueue.add("Luna $moonPhaseIcon")
 
                                 val finalSubList = displayQueue.take(4)
@@ -749,16 +778,19 @@ jobs:
                     }
 
                     val now = System.currentTimeMillis()
-                    
-                    val endOfDay = Calendar.getInstance().apply {
-                        set(Calendar.HOUR_OF_DAY, 23)
-                        set(Calendar.MINUTE, 59)
-                        set(Calendar.SECOND, 59)
-                    }.timeInMillis
+                    val endTime = if (viewMode == 1) {
+                        Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, 23)
+                            set(Calendar.MINUTE, 59)
+                            set(Calendar.SECOND, 59)
+                        }.timeInMillis
+                    } else {
+                        now + (2 * 60 * 60 * 1000)
+                    }
 
                     val builder = CalendarContract.Instances.CONTENT_URI.buildUpon()
                     ContentUris.appendId(builder, now)
-                    ContentUris.appendId(builder, endOfDay)
+                    ContentUris.appendId(builder, endTime)
 
                     val projection = arrayOf(
                         CalendarContract.Instances.TITLE, 
@@ -774,11 +806,7 @@ jobs:
                         builder.build(), projection, null, null, sortOrder
                     )?.use { cursor ->
                         var hasEvents = false
-                        var displayedCount = 0
-                        var totalEventsToday = 0
-
-                        val twoHoursFromNow = now + (2 * 60 * 60 * 1000)
-
+                        var eventCount = 0
                         while (cursor.moveToNext()) {
                             val titleStr = cursor.getString(0) ?: "Evento"
                             val begin = cursor.getLong(1)
@@ -793,81 +821,71 @@ jobs:
                                 }
                             }
 
-                            if (end <= now) { continue }
-                            
-                            val eventKey = "${titleStr}_${begin}"
-                            if (seenEvents.contains(eventKey)) { continue }
-                            seenEvents.add(eventKey)
-                            
-                            hasEvents = true
-                            totalEventsToday++
-
-                            if (viewMode == 0 && begin > twoHoursFromNow) {
+                            if (viewMode == 0 && end <= now) {
                                 continue
                             }
+                            
+                            if (seenEvents.contains(titleStr)) continue
+                            seenEvents.add(titleStr)
+                            
+                            hasEvents = true
+                            eventCount++
 
-                            val maxVisible = if (viewMode == 0) 2 else 4
-
-                            if (displayedCount < maxVisible) {
-                                displayedCount++
-                                var minutesLeft = ((begin - now) / 60000).toInt()
-                                if (minutesLeft < 0) { minutesLeft = 0 }
-                                
-                                var flair = "📅"
-                                val lowerTitle = titleStr.lowercase()
-                                when {
-                                    lowerTitle.contains("dentist") -> flair = "🦷"
-                                    lowerTitle.contains("médic") || lowerTitle.contains("medic") || lowerTitle.contains("hospital") || lowerTitle.contains("consulta") || lowerTitle.contains("sergas") -> flair = "⚕️"
-                                    lowerTitle.contains("baloncesto") || lowerTitle.contains("basket") || lowerTitle.contains("obradoiro") -> flair = "🏀"
-                                    lowerTitle.contains("tenis") || lowerTitle.contains("pádel") || lowerTitle.contains("padel") -> flair = "🎾"
-                                    lowerTitle.contains("fútbol") || lowerTitle.contains("futbol") || lowerTitle.contains("futsal") -> flair = "⚽"
-                                    lowerTitle.contains("piscina") || lowerTitle.contains("natación") || lowerTitle.contains("natacion") || lowerTitle.contains("swolf") -> flair = "🏊"
-                                    lowerTitle.contains("vuel") || lowerTitle.contains("avión") || lowerTitle.contains("avion") || lowerTitle.contains("flight") -> flair = "✈️"
-                                    lowerTitle.contains("tren") || lowerTitle.contains("renfe") || lowerTitle.contains("ave") || lowerTitle.contains("alvia") -> flair = "🚆"
-                                    lowerTitle.contains("hotel") || lowerTitle.contains("reserva") || lowerTitle.contains("b&b") -> flair = "🏨"
-                                    lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
-                                }
-
-                                // ASIGNACIÓN SECUENCIAL PURA BLINDADA (SIN EXPRESIONES IF)
-                                var timeText: String
-                                if (isAllDay) {
-                                    timeText = "Todo el día"
-                                } else if (viewMode == 1) {
-                                    val evCal = Calendar.getInstance().apply { timeInMillis = begin }
-                                    timeText = String.format(Locale.getDefault(), "%02d:%02d", evCal.get(Calendar.HOUR_OF_DAY), evCal.get(Calendar.MINUTE))
-                                } else if (minutesLeft <= 0) {
-                                    timeText = "Ahora"
-                                } else if (minutesLeft <= 60) {
-                                    timeText = "$minutesLeft min"
-                                } else if (minutesLeft <= 90) {
-                                    timeText = "Menos de 1h y media"
-                                } else {
-                                    timeText = "Menos de 2 horas"
-                                }
-
-                                var hexColor: String
-                                if (isAllDay) {
-                                    hexColor = "#4CFF4C"
-                                } else if (minutesLeft <= 15) {
-                                    hexColor = "#FF4C4C"
-                                } else if (minutesLeft <= 60) {
-                                    hexColor = "#FFA500"
-                                } else {
-                                    hexColor = "#4CFF4C"
-                                }
-
-                                htmlText.append("<font color='$hexColor'>$flair $titleStr &nbsp;•&nbsp; $timeText</font><br>")
+                            if (eventCount > 4) {
+                                val overflowMsg = if (viewMode == 1) "... y más eventos hoy" else "... y más eventos próximos"
+                                htmlText.append("<font color='#AAAAAA'>$overflowMsg</font>")
+                                break
                             }
+                            
+                            var minutesLeft = ((begin - now) / 60000).toInt()
+                            if (minutesLeft < 0) minutesLeft = 0
+                            
+                            var flair = "📅"
+                            val lowerTitle = titleStr.lowercase()
+                            when {
+                                lowerTitle.contains("dentist") -> flair = "🦷"
+                                lowerTitle.contains("médic") || lowerTitle.contains("medic") || lowerTitle.contains("hospital") || lowerTitle.contains("consulta") || lowerTitle.contains("sergas") -> flair = "⚕️"
+                                lowerTitle.contains("baloncesto") || lowerTitle.contains("basket") || lowerTitle.contains("obradoiro") -> flair = "🏀"
+                                lowerTitle.contains("tenis") || lowerTitle.contains("pádel") || lowerTitle.contains("padel") -> flair = "🎾"
+                                lowerTitle.contains("fútbol") || lowerTitle.contains("futbol") || lowerTitle.contains("futsal") -> flair = "⚽"
+                                lowerTitle.contains("piscina") || lowerTitle.contains("natación") || lowerTitle.contains("natacion") || lowerTitle.contains("swolf") -> flair = "🏊"
+                                lowerTitle.contains("vuel") || lowerTitle.contains("avión") || lowerTitle.contains("avion") || lowerTitle.contains("flight") -> flair = "✈️"
+                                lowerTitle.contains("tren") || lowerTitle.contains("renfe") || lowerTitle.contains("ave") || lowerTitle.contains("alvia") -> flair = "🚆"
+                                lowerTitle.contains("hotel") || lowerTitle.contains("reserva") || lowerTitle.contains("b&b") -> flair = "🏨"
+                                lowerTitle.contains("comida") || lowerTitle.contains("cena") || lowerTitle.contains("restaurante") -> flair = "🍽️"
+                            }
+
+                            val timeText = if (isAllDay) {
+                                "Todo el día"
+                            } else {
+                                if (viewMode == 1) {
+                                    val evCal = Calendar.getInstance().apply { timeInMillis = begin }
+                                    String.format(Locale.getDefault(), "%02d:%02d", evCal.get(Calendar.HOUR_OF_DAY), evCal.get(Calendar.MINUTE))
+                                } else {
+                                    when {
+                                        minutesLeft <= 0 -> "Ahora"
+                                        minutesLeft <= 60 -> "$minutesLeft min"
+                                        minutesLeft <= 90 -> "Menos de 1h y media"
+                                        else -> "Menos de 2 horas"
+                                    }
+                                }
+                            }
+
+                            val hexColor = if (isAllDay) {
+                                "#4CFF4C"
+                            } else {
+                                when {
+                                    minutesLeft <= 15 -> "#FF4C4C"
+                                    minutesLeft <= 60 -> "#FFA500"
+                                    else -> "#4CFF4C"
+                                }
+                            }
+
+                            htmlText.append("<font color='$hexColor'>$flair $titleStr &nbsp;•&nbsp; $timeText</font><br>")
                         }
                         
-                        if (hasEvents) {
-                            val remaining = totalEventsToday - displayedCount
-                            if (remaining > 0) {
-                                val overflowMsg = if (viewMode == 1) "... y $remaining más hoy" else "... y más eventos hoy"
-                                htmlText.append("<font color='#AAAAAA'>$overflowMsg</font>")
-                            }
-                        } else {
-                            val msg = if (viewMode == 1) "Sin eventos para hoy" else "Sin eventos en las próximas 2 horas"
+                        if (!hasEvents) {
+                            val msg = if (viewMode == 1) "Sin eventos para hoy" else "Sin eventos en las próximas 2 me horas"
                             htmlText.append("<font color='#AAAAAA'>$msg</font>")
                         }
                     } ?: run {
@@ -904,5 +922,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v4.1-alpha9-APK
+        name: DeUnVistazoXL-v4.1-alpha3-APK
         path: app/build/outputs/apk/debug/app-debug.apk
