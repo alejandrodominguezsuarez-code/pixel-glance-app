@@ -1,4 +1,4 @@
-name: Compilar Widget Pixel 6 Pro V4.1-alpha3 (Efectos Clima Expandidos)
+name: Compilar Widget Pixel 6 Pro V4.1-alpha4 (Efectos Clima Expandidos)
 
 on:
   workflow_dispatch:
@@ -57,8 +57,8 @@ jobs:
                 applicationId = "com.alex.pixelglancewidget"
                 minSdk = 26
                 targetSdk = 34
-                versionCode = 41
-                versionName = "4.1-alpha3"
+                versionCode = 42
+                versionName = "4.1-alpha4"
             }
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
@@ -137,18 +137,18 @@ jobs:
         </layer-list>
         EOF
 
-        # 3. PATRÓN NIEVE Y CAPA COMPUESTA
+        # 3. PATRÓN NIEVE Y CAPA COMPUESTA (CORREGIDO PARA AAPT)
         cat << 'EOF' > app/src/main/res/drawable/ic_snow_flakes_pattern.xml
         <?xml version="1.0" encoding="utf-8"?>
         <vector xmlns:android="http://schemas.android.com/apk/res/android"
             android:width="200dp" android:height="200dp"
             android:viewportWidth="100" android:viewportHeight="100">
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.35" android:pathData="M20,15 L20,25 M15,20 L25,20 M16,16 L24,24 M16,24 L24,16" strokeColor="#FFFFFF" strokeWidth="0.8"/>
-            <path android:fillColor="#FFFFFF" android:fillAlpha="0.25" android:pathData="M75,30 L75,38 M71,34 L79,34 M72,31 L78,37 M72,37 L78,31" strokeColor="#FFFFFF" strokeWidth="0.8"/>
-            <circle android:cx="45" android:cy="12" android:r="1.5" android:fillColor="#FFFFFF" android:fillAlpha="0.4"/>
-            <circle android:cx="85" android:cy="70" android:r="2.0" android:fillColor="#FFFFFF" android:fillAlpha="0.3"/>
-            <circle android:cx="30" android:cy="65" android:r="1.2" android:fillColor="#FFFFFF" android:fillAlpha="0.35"/>
-            <circle android:cx="60" android:cy="80" android:r="1.8" android:fillColor="#FFFFFF" android:fillAlpha="0.25"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.35" android:pathData="M20,15 L20,25 M15,20 L25,20 M16,16 L24,24 M16,24 L24,16" android:strokeColor="#FFFFFF" android:strokeWidth="0.8"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.25" android:pathData="M75,30 L75,38 M71,34 L79,34 M72,31 L78,37 M72,37 L78,31" android:strokeColor="#FFFFFF" android:strokeWidth="0.8"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.40" android:pathData="M45,10.5 A1.5,1.5 0 1 0 45,13.5 A1.5,1.5 0 1 0 45,10.5 Z"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.30" android:pathData="M85,68 A2,2 0 1 0 85,72 A2,2 0 1 0 85,68 Z"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.35" android:pathData="M30,63.8 A1.2,1.2 0 1 0 30,66.2 A1.2,1.2 0 1 0 30,63.8 Z"/>
+            <path android:fillColor="#FFFFFF" android:fillAlpha="0.25" android:pathData="M60,78.2 A1.8,1.8 0 1 0 60,81.8 A1.8,1.8 0 1 0 60,78.2 Z"/>
         </vector>
         EOF
 
@@ -885,7 +885,7 @@ jobs:
                         }
                         
                         if (!hasEvents) {
-                            val msg = if (viewMode == 1) "Sin eventos para hoy" else "Sin eventos en las próximas 2 me horas"
+                            val msg = if (viewMode == 1) "Sin eventos para hoy" else "Sin eventos en las próximas 2 horas"
                             htmlText.append("<font color='#AAAAAA'>$msg</font>")
                         }
                     } ?: run {
@@ -922,5 +922,5 @@ jobs:
     - name: Subir APK
       uses: actions/upload-artifact@v4
       with:
-        name: DeUnVistazoXL-v4.1-alpha3-APK
+        name: DeUnVistazoXL-v4.1-alpha4-APK
         path: app/build/outputs/apk/debug/app-debug.apk
